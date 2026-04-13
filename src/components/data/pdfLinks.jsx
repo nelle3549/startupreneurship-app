@@ -1,0 +1,18 @@
+export const EVALUATION_PDF_LINKS = {
+  "grade-1": "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6988a35c638b51ac0d5d3224/b0ca46245_StartupreneurGrade1evaluationcopy.pdf",
+  "grade-2": "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6988a35c638b51ac0d5d3224/b080722a8_StartupreneurGrade2evaluationcopy.pdf",
+  "grade-3": "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6988a35c638b51ac0d5d3224/6a62e72a4_StartupreneurGrade3evaluationcopy.pdf",
+  "grade-4": "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6988a35c638b51ac0d5d3224/87a65e430_StartupreneurGrade4evaluationcopy.pdf",
+  "grade-5": "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6988a35c638b51ac0d5d3224/c11faa7e7_StartupreneurGrade5evaluationcopy.pdf",
+  "grade-6": "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6988a35c638b51ac0d5d3224/9d23c5bd5_StartupreneurGrade6evaluationcopy.pdf",
+  "grade-7": "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6988a35c638b51ac0d5d3224/a7bfba9e2_StartupreneurGrade7evaluationcopy.pdf",
+  "grade-8": "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6988a35c638b51ac0d5d3224/941651e4b_StartupreneurGrade8evaluationcopy.pdf",
+  "grade-9": "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6988a35c638b51ac0d5d3224/6fdec0cfb_StartupreneurGrade9evaluationcopy.pdf",
+  "grade-10": "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6988a35c638b51ac0d5d3224/44b24d79a_StartupreneurGrade10evaluationcopy.pdf",
+  "grade-11": "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6988a35c638b51ac0d5d3224/015948c7a_StartupreneurGrade11evaluationcopy.pdf",
+  "grade-12": "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6988a35c638b51ac0d5d3224/5b33a7c1b_StartupreneurGrade12evaluationcopy.pdf",
+  "college-1": "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6988a35c638b51ac0d5d3224/ea1507136_Startupreneur1styearevaluationcopy.pdf",
+  "college-2": "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6988a35c638b51ac0d5d3224/c572ced0b_Startupreneur2ndyearevaluationcopy.pdf",
+  "college-3": "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6988a35c638b51ac0d5d3224/9a86433a8_Startupreneur3rdyearevaluationcopy.pdf",
+  "college-4": "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6988a35c638b51ac0d5d3224/e8b6fd303_Startupreneur4thyearevaluationcopy.pdf",
+};

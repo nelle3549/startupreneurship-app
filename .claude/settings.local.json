@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh auth:*)",
+      "Bash(ls -la \"/Users/nelle/Documents/Claude/Projects/Startupreneurship App/.env\"*)"
+    ]
+  }
+}
