@@ -1,10 +1,24 @@
 import { useQuery } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/api/supabaseClient";
+import { entities } from "@/api/entities";
 
 export function useCurrentUser() {
   const { data: authUser, isLoading: authLoading } = useQuery({
     queryKey: ["current-user"],
-    queryFn: () => base44.auth.me(),
+    queryFn: async () => {
+      const { data: { user }, error } = await supabase.auth.getUser();
+      if (error || !user) throw error || new Error("Not authenticated");
+      const meta = user.user_metadata || {};
+      return {
+        id: user.id,
+        email: user.email,
+        first_name: meta.first_name || meta.full_name?.split(" ")[0] || "",
+        last_name: meta.last_name || meta.full_name?.split(" ").slice(1).join(" ") || "",
+        full_name: meta.full_name || "",
+        avatar_url: meta.avatar_url || meta.picture || "",
+        role: "guest",
+      };
+    },
     retry: false,
     staleTime: 1000 * 60 * 5,
   });
@@ -12,17 +26,21 @@ export function useCurrentUser() {
   const { data: userAccount, isLoading: accountLoading } = useQuery({
     queryKey: ["user-account", authUser?.email],
     queryFn: async () => {
-      const accounts = await base44.entities.UserAccount.filter({ email: authUser.email });
+      const accounts = await entities.UserAccount.filter({ email: authUser.email });
       if (accounts.length > 0) return accounts[0];
-      // Auto-create UserAccount on first login, migrating existing role data
-      return await base44.entities.UserAccount.create({
+
+      // Auto-create UserAccount on first login, using Google profile data
+      const hasName = !!(authUser.first_name && authUser.last_name);
+      return await entities.UserAccount.create({
         user_id: authUser.id,
         email: authUser.email,
         first_name: authUser.first_name || "",
         last_name: authUser.last_name || "",
-        role: authUser.role === "admin" ? "admin" : "guest",
-        facilitator_status: authUser.facilitator_status || "none",
-        school_organization: authUser.school_organization || "",
+        role: "guest",
+        facilitator_status: "none",
+        school_organization: "",
+        // Auto-complete onboarding if Google provided name
+        onboarding_completed: hasName,
       });
     },
     enabled: !!authUser?.email,

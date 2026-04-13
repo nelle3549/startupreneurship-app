@@ -1,6 +1,20 @@
 import React from 'react';
+import { supabase } from '@/api/supabaseClient';
 
 const UserNotRegisteredError = () => {
+  const handleRetry = () => {
+    window.location.reload();
+  };
+
+  const handleSignInDifferent = async () => {
+    await supabase.auth.signOut();
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin },
+    });
+    if (error) console.error('Login redirect failed:', error);
+  };
+
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-white to-slate-50">
       <div className="max-w-md w-full p-8 bg-white rounded-lg shadow-lg border border-slate-100">
@@ -12,14 +26,27 @@ const UserNotRegisteredError = () => {
           </div>
           <h1 className="text-3xl font-bold text-slate-900 mb-4">Access Restricted</h1>
           <p className="text-slate-600 mb-8">
-            You are not registered to use this application. Please contact the app administrator to request access.
+            There was an issue accessing this application. This may be a temporary problem.
           </p>
-          <div className="p-4 bg-slate-50 rounded-md text-sm text-slate-600">
-            <p>If you believe this is an error, you can:</p>
+          <div className="space-y-3">
+            <button
+              onClick={handleRetry}
+              className="w-full px-4 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+            >
+              Try Again
+            </button>
+            <button
+              onClick={handleSignInDifferent}
+              className="w-full px-4 py-2.5 bg-white text-slate-700 border border-slate-300 rounded-lg font-medium hover:bg-slate-50 transition-colors"
+            >
+              Sign in with a different account
+            </button>
+          </div>
+          <div className="mt-6 p-4 bg-slate-50 rounded-md text-sm text-slate-600">
+            <p>If this issue persists:</p>
             <ul className="list-disc list-inside mt-2 space-y-1">
               <li>Verify you are logged in with the correct account</li>
               <li>Contact the app administrator for access</li>
-              <li>Try logging out and back in again</li>
             </ul>
           </div>
         </div>

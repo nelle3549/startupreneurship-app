@@ -1,7 +1,6 @@
 import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
-import NavigationTracker from '@/lib/NavigationTracker'
 import { pagesConfig } from './pages.config'
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import HomeNew from './pages/Home';
@@ -20,6 +19,7 @@ import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import CompleteProfileDialog from '@/components/CompleteProfileDialog';
 import { useCurrentUser } from '@/components/useCurrentUser';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
+import LoginSignup from '@/components/registration/LoginSignup';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -30,10 +30,10 @@ const LayoutWrapper = ({ children, currentPageName }) => Layout ?
   : <>{children}</>;
 
 const AuthenticatedApp = () => {
-  const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
+  const { isLoadingAuth, isLoadingPublicSettings, isAuthenticated, authError, navigateToLogin } = useAuth();
   const { userAccount, user: authUser } = useCurrentUser();
 
-  // Show loading spinner while checking app public settings or auth
+  // Show loading spinner while checking auth
   if (isLoadingPublicSettings || isLoadingAuth) {
     return (
       <div className="fixed inset-0 flex items-center justify-center">
@@ -46,11 +46,12 @@ const AuthenticatedApp = () => {
   if (authError) {
     if (authError.type === 'user_not_registered') {
       return <UserNotRegisteredError />;
-    } else if (authError.type === 'auth_required') {
-      // Redirect to login automatically
-      navigateToLogin();
-      return null;
     }
+  }
+
+  // Not authenticated — show login
+  if (!isAuthenticated) {
+    return <LoginSignup onComplete={() => window.location.reload()} />;
   }
 
   // Render the main app
@@ -130,7 +131,6 @@ function App() {
     <AuthProvider>
       <QueryClientProvider client={queryClientInstance}>
         <Router>
-          <NavigationTracker />
           <AuthenticatedApp />
         </Router>
         <Toaster />
