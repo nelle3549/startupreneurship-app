@@ -11,6 +11,7 @@ import {
   ChevronUp, ChevronDown, Plus, Trash2, Edit2, X, CheckCircle, HelpCircle, AlertCircle, Eye
 } from "lucide-react";
 import McqActivityBuilder from "./McqActivityBuilder";
+import LessonRenderer from "../viewer/LessonRenderer";
 import MicroValidationActivityBuilder from "./MicroValidationActivityBuilder";
 import {
   AlertDialog,
@@ -42,6 +43,7 @@ export default function CourseEditorFullscreen({ yearLevel, onClose }) {
   const [saveError, setSaveError] = useState(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(null); // { kind: "section"|"lesson", id/idx, label }
+  const [showPreview, setShowPreview] = useState(false);
 
   // Fetch Course Details from DB
   const { data: dbCourseDetails = null } = useQuery({
@@ -580,15 +582,6 @@ export default function CourseEditorFullscreen({ yearLevel, onClose }) {
             <div className="p-8 max-w-4xl">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-bold text-gray-900">Course Details</h2>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-1.5"
-                    onClick={() => window.open(`/Viewer?yearLevel=${yearLevel.key}&lesson=0&returnTo=CourseBuilder`, '_blank')}
-                  >
-                    <Eye className="w-4 h-4" />
-                    Preview
-                  </Button>
               </div>
               
               <div className="space-y-6">
@@ -686,15 +679,6 @@ export default function CourseEditorFullscreen({ yearLevel, onClose }) {
                       </h2>
                     )}
                   </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="gap-1.5 flex-shrink-0 mt-5"
-                      onClick={() => window.open(`/Viewer?yearLevel=${yearLevel.key}&lesson=${selectedLessonNum}&returnTo=CourseBuilder`, '_blank')}
-                    >
-                      <Eye className="w-4 h-4" />
-                      Preview
-                    </Button>
                 </div>
                 <div>
                   <p className="text-xs text-gray-400 mb-1">Summary</p>
@@ -932,11 +916,76 @@ export default function CourseEditorFullscreen({ yearLevel, onClose }) {
           <Button variant="outline" onClick={handleCloseClick} disabled={isSaving}>
             Close
           </Button>
+          <Button variant="outline" onClick={() => setShowPreview(true)} className="gap-1.5">
+            <Eye className="w-4 h-4" />
+            Preview
+          </Button>
           <Button onClick={handleSaveAll} disabled={!hasUnsavedChanges || isSaving} className="bg-emerald-600 hover:bg-emerald-700 text-white">
             {isSaving ? "Saving..." : "Save Changes"}
           </Button>
         </div>
       </div>
+
+      {/* Live Preview Modal */}
+      {showPreview && (
+        <div className="fixed inset-0 z-[60] bg-white flex flex-col">
+          <header className="flex-shrink-0 border-b border-gray-200 px-4 py-3 flex items-center justify-between bg-gray-50">
+            <div className="flex items-center gap-3">
+              <Eye className="w-4 h-4 text-gray-500" />
+              <h3 className="text-sm font-bold text-gray-900">
+                Preview: {selectedLessonNum === null
+                  ? "Course Details"
+                  : lessons.find(l => l.num === selectedLessonNum)?.title || `Lesson ${selectedLessonNum}`}
+              </h3>
+              {hasUnsavedChanges && (
+                <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">Unsaved changes</span>
+              )}
+            </div>
+            <Button variant="outline" size="sm" onClick={() => setShowPreview(false)}>
+              Close Preview
+            </Button>
+          </header>
+          <div className="flex-1 overflow-y-auto bg-white">
+            {selectedLessonNum === null ? (
+              <div className="mx-auto px-8 py-8 max-w-3xl">
+                <h1 className="text-3xl font-bold text-[#0B5394] mb-2">{yearLevel.grade}</h1>
+                <p className="text-lg text-gray-600 mb-4">{details.subtitle}</p>
+                {details.quote && (
+                  <blockquote className="border-l-4 border-blue-400 bg-blue-50 rounded-r-lg px-4 py-3 mb-4 italic text-gray-700">
+                    "{details.quote}" — {details.quoteAuthor}
+                  </blockquote>
+                )}
+                <p className="text-gray-700 mb-6">{details.summary}</p>
+                {details.objectives?.length > 0 && (
+                  <div className="p-5 bg-blue-50 rounded-xl border border-blue-200">
+                    <h2 className="text-xl font-bold text-[#0B5394] mb-3">Course Objectives</h2>
+                    <ul className="space-y-2">
+                      {details.objectives.map((obj, i) => (
+                        <li key={i} className="flex gap-3 text-gray-700 text-sm">
+                          <CheckCircle className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+                          <span>{obj}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div>
+                {lessonObjectives.length > 0 && (
+                  <LessonRenderer section={null} lessonObjectives={lessonObjectives} onActivityComplete={() => {}} />
+                )}
+                {sections.map(section => (
+                  <LessonRenderer key={section.id} section={section} onActivityComplete={() => {}} />
+                ))}
+                {sections.length === 0 && (
+                  <div className="text-center text-gray-400 py-16">No sections to preview.</div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!confirmDelete} onOpenChange={(open) => !open && setConfirmDelete(null)}>
