@@ -1,20 +1,22 @@
 import React from "react";
-import ReactMarkdown from "react-markdown";
 import MCQActivity from "./MCQActivity";
 import MicroValidationActivity from "./MicroValidationActivity";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, Rocket, Info, AlertTriangle, Lightbulb } from "lucide-react";
 
+/** Shared prose class for all HTML content from Quill editor */
+const proseClass = "prose prose-slate max-w-none prose-headings:text-[#0B5394] prose-headings:font-bold prose-p:text-gray-700 prose-p:leading-relaxed prose-li:text-gray-700 prose-strong:text-gray-900 prose-blockquote:border-l-blue-400 prose-blockquote:bg-blue-50 prose-blockquote:py-2 prose-blockquote:px-4 prose-blockquote:rounded-r-lg prose-blockquote:not-italic prose-a:text-blue-600 prose-a:underline prose-img:rounded-xl prose-img:border prose-img:border-gray-200 prose-img:mx-auto prose-table:text-sm prose-th:bg-gray-100 prose-th:px-3 prose-th:py-2 prose-td:px-3 prose-td:py-2 prose-td:border prose-th:border prose-ol:list-decimal prose-ul:list-disc";
+
 export default function LessonRenderer({ section, onActivityComplete, lessonObjectives }) {
   // Render lesson objectives at the start (only once)
   if (!section && lessonObjectives && lessonObjectives.length > 0) {
     return (
-      <div className="mx-auto px-8 py-8 max-w-3xl">
-        <div className="mb-8 p-6 bg-blue-50 rounded-lg border border-blue-200">
-          <h2 className="text-2xl font-bold text-[#0B5394] mb-4">Learning Objectives</h2>
+      <div className="mx-auto px-6 sm:px-8 py-6 sm:py-8 max-w-3xl">
+        <div className="p-5 sm:p-6 bg-blue-50 rounded-xl border border-blue-200">
+          <h2 className="text-xl sm:text-2xl font-bold text-[#0B5394] mb-4">Learning Objectives</h2>
           <ul className="space-y-2">
             {lessonObjectives.map((obj, idx) => (
-              <li key={idx} className="flex gap-3 text-gray-700">
+              <li key={idx} className="flex gap-3 text-gray-700 text-sm sm:text-base">
                 <CheckCircle className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
                 <span>{obj}</span>
               </li>
@@ -30,9 +32,11 @@ export default function LessonRenderer({ section, onActivityComplete, lessonObje
   // Render text sections (Quill HTML output)
   if (section.type === "text") {
     return (
-      <div className="mx-auto px-8 py-8 max-w-3xl">
-        {section.title && <h2 className="text-2xl font-bold text-[#0B5394] mb-3">{section.title}</h2>}
-        <div className="text-gray-700 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: section.content }} />
+      <div className="mx-auto px-6 sm:px-8 py-6 sm:py-8 max-w-3xl">
+        {section.title && (
+          <h2 className="text-xl sm:text-2xl font-bold text-[#0B5394] mb-4">{section.title}</h2>
+        )}
+        <div className={proseClass} dangerouslySetInnerHTML={{ __html: section.content }} />
       </div>
     );
   }
@@ -40,9 +44,11 @@ export default function LessonRenderer({ section, onActivityComplete, lessonObje
   // Render image sections
   if (section.type === "image") {
     return (
-      <div className="mx-auto px-8 py-8 max-w-3xl">
-        {section.title && <h2 className="text-2xl font-bold text-[#0B5394] mb-3">{section.title}</h2>}
-        <div className="rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
+      <div className="mx-auto px-6 sm:px-8 py-6 sm:py-8 max-w-3xl">
+        {section.title && (
+          <h2 className="text-xl sm:text-2xl font-bold text-[#0B5394] mb-4">{section.title}</h2>
+        )}
+        <div className="rounded-xl overflow-hidden border border-gray-200 bg-gray-50 mb-4">
           <img
             src={section.src}
             alt={section.alt || section.title || ""}
@@ -50,10 +56,10 @@ export default function LessonRenderer({ section, onActivityComplete, lessonObje
           />
         </div>
         {section.caption && (
-          <p className="text-sm text-gray-500 text-center mt-2 italic">{section.caption}</p>
+          <p className="text-sm text-gray-500 text-center mb-4 italic">{section.caption}</p>
         )}
         {section.content && (
-          <div className="text-gray-700 prose prose-sm max-w-none mt-4" dangerouslySetInnerHTML={{ __html: section.content }} />
+          <div className={proseClass} dangerouslySetInnerHTML={{ __html: section.content }} />
         )}
       </div>
     );
@@ -62,9 +68,11 @@ export default function LessonRenderer({ section, onActivityComplete, lessonObje
   // Render video sections
   if (section.type === "video") {
     return (
-      <div className="mx-auto px-8 py-8 max-w-3xl">
-        {section.title && <h2 className="text-2xl font-bold text-[#0B5394] mb-3">{section.title}</h2>}
-        <div className="rounded-xl overflow-hidden border border-gray-200 bg-black aspect-video">
+      <div className="mx-auto px-6 sm:px-8 py-6 sm:py-8 max-w-3xl">
+        {section.title && (
+          <h2 className="text-xl sm:text-2xl font-bold text-[#0B5394] mb-4">{section.title}</h2>
+        )}
+        <div className="rounded-xl overflow-hidden border border-gray-200 bg-black aspect-video mb-4">
           <iframe
             src={section.src}
             title={section.title || "Video"}
@@ -74,10 +82,10 @@ export default function LessonRenderer({ section, onActivityComplete, lessonObje
           />
         </div>
         {section.caption && (
-          <p className="text-sm text-gray-500 text-center mt-2 italic">{section.caption}</p>
+          <p className="text-sm text-gray-500 text-center mb-4 italic">{section.caption}</p>
         )}
         {section.content && (
-          <div className="text-gray-700 prose prose-sm max-w-none mt-4" dangerouslySetInnerHTML={{ __html: section.content }} />
+          <div className={proseClass} dangerouslySetInnerHTML={{ __html: section.content }} />
         )}
       </div>
     );
@@ -94,13 +102,13 @@ export default function LessonRenderer({ section, onActivityComplete, lessonObje
     const style = styles[section.style] || styles.action;
 
     return (
-      <div className="mx-auto px-8 py-8 max-w-3xl">
-        <div className={`${style.bg} border ${style.border} rounded-xl p-6`}>
+      <div className="mx-auto px-6 sm:px-8 py-6 sm:py-8 max-w-3xl">
+        <div className={`${style.bg} border ${style.border} rounded-xl p-5 sm:p-6`}>
           <div className="flex items-center gap-2 mb-3">
             {style.icon}
             <h2 className={`text-lg font-bold ${style.titleColor}`}>{section.title || "Note"}</h2>
           </div>
-          <div className="text-gray-700 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: section.content }} />
+          <div className={`${proseClass} prose-p:text-gray-600`} dangerouslySetInnerHTML={{ __html: section.content }} />
         </div>
       </div>
     );
@@ -109,8 +117,6 @@ export default function LessonRenderer({ section, onActivityComplete, lessonObje
   // Render activity sections
   if (section.type === "activity") {
     if (section.activity_type === "mcq_graded" || section.activity_type === "mcq") {
-      // MCQActivity expects { q, options, answer } — normalize both legacy `items`
-      // and the builder shape `{ question, options, correct_answer_index }`.
       const toViewerQuestion = (src) => ({
         q: src.q ?? src.question ?? "",
         options: src.options || [],
@@ -123,7 +129,7 @@ export default function LessonRenderer({ section, onActivityComplete, lessonObje
           : [];
       return (
         <div className="max-w-2xl mx-auto py-8 px-4">
-          <div className="p-3 mb-4 bg-purple-50 rounded border border-purple-200">
+          <div className="p-3 mb-4 bg-purple-50 rounded-lg border border-purple-200">
             <p className="text-xs font-semibold text-purple-700">Graded Assessment</p>
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-6">{section.title}</h2>
@@ -138,7 +144,7 @@ export default function LessonRenderer({ section, onActivityComplete, lessonObje
     if (section.activity_type === "identification_graded") {
       return (
         <div className="max-w-2xl mx-auto py-8 px-4 space-y-4">
-          <div className="p-3 mb-4 bg-orange-50 rounded border border-orange-200">
+          <div className="p-3 mb-4 bg-orange-50 rounded-lg border border-orange-200">
             <p className="text-xs font-semibold text-orange-700">Graded Assessment</p>
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-6">{section.title}</h2>
@@ -160,8 +166,6 @@ export default function LessonRenderer({ section, onActivityComplete, lessonObje
     }
 
     if (section.activity_type === "micro_validation") {
-      // Normalize to MicroValidationActivity's expected shape:
-      //   { q, options: [{ text, explanation }], correct_answer }
       const raw = section.items?.[0] || section;
       const correctIdx = raw.correct_answer ?? raw.correct_answer_index ?? 0;
       const sharedExplanation = raw.correct_answer_explanation || "";
@@ -188,7 +192,7 @@ export default function LessonRenderer({ section, onActivityComplete, lessonObje
       };
       return (
         <div className="max-w-2xl mx-auto py-8 px-4">
-          <div className="p-3 mb-4 bg-cyan-50 rounded border border-cyan-200">
+          <div className="p-3 mb-4 bg-cyan-50 rounded-lg border border-cyan-200">
             <p className="text-xs font-semibold text-cyan-700">Check Your Understanding</p>
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-6">{section.title}</h2>
