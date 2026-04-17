@@ -1,18 +1,27 @@
 import { useQuery } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/api/supabaseClient";
+import { entities } from "@/api/entities";
+import { useAuth } from "@/lib/AuthContext";
 
 export function useNotifications() {
+  const { isAuthenticated } = useAuth();
+
   const { data: user } = useQuery({
     queryKey: ["current-user"],
-    queryFn: () => base44.auth.me(),
+    queryFn: async () => {
+      const { data: { user }, error } = await supabase.auth.getUser();
+      if (error || !user) return null;
+      return user;
+    },
     retry: false,
+    enabled: isAuthenticated,
   });
 
   // Count pending facilitator requests (admin only)
   const { data: pendingFacilitators = [] } = useQuery({
     queryKey: ["pending-facilitators"],
-    queryFn: () => base44.entities.User.list(),
-    enabled: user?.role === "admin",
+    queryFn: () => entities.User.list(),
+    enabled: !!user && user?.role === "admin",
     select: (data) => data.filter(u => u.facilitator_status === "pending"),
     staleTime: 5000,
   });
@@ -20,13 +29,13 @@ export function useNotifications() {
   // Count pending student enrollments (facilitator only)
   const { data: classrooms = [] } = useQuery({
     queryKey: ["classrooms", user?.id],
-    queryFn: () => base44.entities.Classroom.filter({ facilitator_id: user?.id }),
-    enabled: user?.role === "facilitator",
+    queryFn: () => entities.Classroom.filter({ facilitator_id: user?.id }),
+    enabled: !!user && user?.role === "facilitator",
   });
 
   const { data: pendingEnrollments = [] } = useQuery({
     queryKey: ["pending-enrollments", classrooms.map(c => c.id).join(',')],
-    queryFn: () => base44.entities.Enrollment.list(),
+    queryFn: () => entities.Enrollment.list(),
     enabled: classrooms.length > 0,
     select: (data) => data.filter(e => e.status === "pending" && classrooms.some(c => c.id === e.classroom_id)),
     staleTime: 5000,

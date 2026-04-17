@@ -7,7 +7,7 @@ export function useCurrentUser() {
     queryKey: ["current-user"],
     queryFn: async () => {
       const { data: { user }, error } = await supabase.auth.getUser();
-      if (error || !user) throw error || new Error("Not authenticated");
+      if (error || !user) return null;
       const meta = user.user_metadata || {};
       return {
         id: user.id,
@@ -29,17 +29,21 @@ export function useCurrentUser() {
       const accounts = await entities.UserAccount.filter({ email: authUser.email });
       if (accounts.length > 0) return accounts[0];
 
-      // Auto-create UserAccount on first login, using Google profile data
+      // Check the users table for role (may have been set by admin)
+      const dbUsers = await entities.User.filter({ email: authUser.email });
+      const dbUser = dbUsers.length > 0 ? dbUsers[0] : null;
+      const dbRole = dbUser?.role || "guest";
+
+      // Auto-create UserAccount on first login
       const hasName = !!(authUser.first_name && authUser.last_name);
       return await entities.UserAccount.create({
         user_id: authUser.id,
         email: authUser.email,
         first_name: authUser.first_name || "",
         last_name: authUser.last_name || "",
-        role: "guest",
-        facilitator_status: "none",
+        role: dbRole,
+        facilitator_status: dbRole === "facilitator" ? "approved" : "none",
         school_organization: "",
-        // Auto-complete onboarding if Google provided name
         onboarding_completed: hasName,
       });
     },
@@ -63,7 +67,7 @@ export function useCurrentUser() {
     account_id: userAccount?.id,
   } : null;
 
-  const isAdmin = authUser?.role === "admin" || userAccount?.role === "admin";
+  const isAdmin = userAccount?.role === "admin" || authUser?.role === "admin";
   const isFacilitator = userAccount?.role === "facilitator" && userAccount?.facilitator_status === "approved";
   const isStudent = userAccount?.role === "student";
 

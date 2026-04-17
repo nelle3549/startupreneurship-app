@@ -1,11 +1,11 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { AlertCircle, Mail, Eye, EyeOff } from "lucide-react";
+import { AlertCircle, Mail, Eye, EyeOff, X } from "lucide-react";
 import { ICON_URL } from "../data/courseData";
 import { supabase } from "@/api/supabaseClient";
 
-export default function LoginSignup({ onComplete }) {
+export default function LoginSignup({ onComplete, onCancel }) {
   const [isSignup, setIsSignup] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -23,14 +23,23 @@ export default function LoginSignup({ onComplete }) {
       return;
     }
 
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters.");
-      return;
-    }
-
-    if (isSignup && password !== confirmPassword) {
-      setError("Passwords do not match.");
-      return;
+    if (isSignup) {
+      if (password.length < 8) {
+        setError("Password must be at least 8 characters.");
+        return;
+      }
+      if (!/[a-zA-Z]/.test(password)) {
+        setError("Password must contain at least one letter.");
+        return;
+      }
+      if (!/[0-9]/.test(password)) {
+        setError("Password must contain at least one number.");
+        return;
+      }
+      if (password !== confirmPassword) {
+        setError("Passwords do not match.");
+        return;
+      }
     }
 
     setLoading(true);
@@ -81,6 +90,11 @@ export default function LoginSignup({ onComplete }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-8 relative">
+        {onCancel && (
+          <button onClick={onCancel} className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
+            <X className="w-4 h-4" />
+          </button>
+        )}
         {/* Logo */}
         <div className="text-center mb-6">
           <img src={ICON_URL} alt="Startupreneur" className="w-12 h-12 mx-auto mb-3" />
@@ -126,7 +140,7 @@ export default function LoginSignup({ onComplete }) {
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => { setPassword(e.target.value); setError(""); }}
-                placeholder="Min. 6 characters"
+                placeholder="Min. 8 characters, letters & numbers"
                 className="pr-10"
                 required
               />

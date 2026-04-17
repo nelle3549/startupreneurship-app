@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -7,12 +7,14 @@ import { base44 } from "@/api/base44Client";
 import { ICON_URL } from "../components/data/courseData";
 import { getSavedUser } from "../components/userStorage";
 import { useCurrentUser } from "../components/useCurrentUser";
+import { useAuth } from "../lib/AuthContext";
 import { useNotifications } from "../components/hooks/useNotifications";
 import DailyBanner from "../components/home/DailyBanner";
 import WhatsBrewingSection from "../components/home/WhatsBrewingSection";
 import GameOfTheDay, { getLoginStreak } from "../components/home/GameOfTheDay";
 import FundingOpportunities from "../components/home/FundingOpportunities";
 import InnovationCompetitions from "../components/home/InnovationCompetitions";
+import LoginSignup from "../components/registration/LoginSignup";
 
 function recordLoginStreak() {
   try {
@@ -26,8 +28,10 @@ function recordLoginStreak() {
 
 export default function Home() {
   const currentUser = getSavedUser();
+  const { isAuthenticated } = useAuth();
   const { user: authUser, isAdmin, isFacilitator, isStudent } = useCurrentUser();
   const { pendingFacilitatorsCount, pendingEnrollmentsCount } = useNotifications();
+  const [showLogin, setShowLogin] = useState(false);
 
   const { data: studentEnrollments = [] } = useQuery({
     queryKey: ["student-enrollments", authUser?.email],
@@ -129,14 +133,14 @@ export default function Home() {
                 </Button>
               </Link>
             )}
-            {currentUser || authUser ? (
+            {isAuthenticated ? (
               <Link to="/AccountSettings">
                 <Button variant="outline" size="icon" className="rounded-full">
                   <UserCircle className="w-4 h-4" />
                 </Button>
               </Link>
             ) : (
-              <Button onClick={() => base44.auth.redirectToLogin(window.location.pathname)} className="rounded-full brand-gradient text-white text-sm px-4">
+              <Button onClick={() => setShowLogin(true)} className="rounded-full brand-gradient text-white text-sm px-4">
                 Get Started
               </Button>
             )}
@@ -174,6 +178,14 @@ export default function Home() {
         {/* What's Brewing — articles & resources */}
         <WhatsBrewingSection />
       </div>
+
+      {/* Login dialog */}
+      {showLogin && (
+        <LoginSignup
+          onComplete={() => window.location.reload()}
+          onCancel={() => setShowLogin(false)}
+        />
+      )}
     </div>
   );
 }
