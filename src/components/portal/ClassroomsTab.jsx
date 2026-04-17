@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { entities } from "@/api/entities";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -71,7 +71,7 @@ function CreateClassroomModal({ facilitatorId, facilitatorEmail, facilitatorScho
   const queryClient = useQueryClient();
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.Classroom.create(data),
+    mutationFn: (data) => entities.Classroom.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["classrooms"] });
       onClose();
@@ -177,17 +177,17 @@ export default function ClassroomsTab({ facilitatorId, facilitatorEmail, facilit
 
   const { data: classrooms = [], isLoading } = useQuery({
     queryKey: ["classrooms", facilitatorId],
-    queryFn: () => base44.entities.Classroom.filter({ facilitator_id: facilitatorId }),
+    queryFn: () => entities.Classroom.filter({ facilitator_id: facilitatorId }),
     enabled: !!facilitatorId,
   });
 
   const { data: enrollments = [] } = useQuery({
     queryKey: ["enrollments-all"],
-    queryFn: () => base44.entities.Enrollment.list(),
+    queryFn: () => entities.Enrollment.list(),
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Classroom.delete(id),
+    mutationFn: (id) => entities.Classroom.delete(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["classrooms"] }),
   });
 

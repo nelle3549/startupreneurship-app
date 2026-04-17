@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { entities } from "@/api/entities";
 import { useQuery } from "@tanstack/react-query";
 import { useCurrentUser } from "@/components/useCurrentUser";
 import { Link } from "react-router-dom";
@@ -81,7 +81,7 @@ export default function LessonsTab({ classroom }) {
   const { data: lessonAccess = [], refetch: refetchAccess } = useQuery({
     queryKey: ["lesson-access", classroom.id, classroom.year_level_key],
     queryFn: () =>
-      base44.entities.LessonAccess.filter({
+      entities.LessonAccess.filter({
         classroom_id: classroom.id,
         year_level_key: classroom.year_level_key,
       }),
@@ -90,7 +90,7 @@ export default function LessonsTab({ classroom }) {
   const { data: studentProgress = [], refetch: refetchStudentProgress } = useQuery({
     queryKey: ["student-lesson-progress", classroom.id, user?.id],
     queryFn: () =>
-      base44.entities.StudentLessonProgress.filter({
+      entities.StudentLessonProgress.filter({
         classroom_id: classroom.id,
         student_id: user?.id,
       }),
@@ -100,32 +100,32 @@ export default function LessonsTab({ classroom }) {
   const { data: allStudentProgress = [], refetch: refetchProgress } = useQuery({
     queryKey: ["all-student-lesson-progress", classroom.id],
     queryFn: () =>
-      base44.entities.StudentLessonProgress.filter({ classroom_id: classroom.id }),
+      entities.StudentLessonProgress.filter({ classroom_id: classroom.id }),
     enabled: isPrivileged,
   });
 
   const { data: enrollments = [] } = useQuery({
     queryKey: ["classroom-enrollments-lessons", classroom.id],
     queryFn: () =>
-      base44.entities.Enrollment.filter({ classroom_id: classroom.id, status: "approved" }),
+      entities.Enrollment.filter({ classroom_id: classroom.id, status: "approved" }),
     enabled: isPrivileged,
   });
 
   const { data: courseDetails = null } = useQuery({
     queryKey: ["course-details-lessons", classroom.year_level_key],
-    queryFn: () => base44.entities.CourseDetails.filter({ year_level_key: classroom.year_level_key }).then(r => r[0] || null),
+    queryFn: () => entities.CourseDetails.filter({ year_level_key: classroom.year_level_key }).then(r => r[0] || null),
   });
 
   const handleRetakeRequest = async () => {
     if (!retakeDialog) return;
     const { prog, lesson } = retakeDialog;
     if (prog) {
-      await base44.entities.StudentLessonProgress.update(prog.id, {
+      await entities.StudentLessonProgress.update(prog.id, {
         retake_requested: true,
         status: "retake_requested",
       });
     } else {
-      await base44.entities.StudentLessonProgress.create({
+      await entities.StudentLessonProgress.create({
         classroom_id: classroom.id,
         student_id: user?.id,
         year_level_key: classroom.year_level_key,

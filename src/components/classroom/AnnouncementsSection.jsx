@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { entities } from "@/api/entities";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCurrentUser } from "@/components/useCurrentUser";
 import { Button } from "@/components/ui/button";
@@ -25,7 +25,7 @@ export default function AnnouncementsSection({ classroom }) {
   // Fetch all UserAccounts to resolve names dynamically
   const { data: allUserAccounts = [] } = useQuery({
     queryKey: ["all-user-accounts-map"],
-    queryFn: () => base44.entities.UserAccount.list(),
+    queryFn: () => entities.UserAccount.list(),
     staleTime: 1000 * 60 * 5,
   });
 
@@ -41,14 +41,14 @@ export default function AnnouncementsSection({ classroom }) {
   const { data: announcements = [], refetch: refetchAnnouncements } = useQuery({
     queryKey: ["classroom-announcements", classroom.id],
     queryFn: () =>
-      base44.entities.Announcement.filter({ classroom_id: classroom.id }),
+      entities.Announcement.filter({ classroom_id: classroom.id }),
   });
 
   // Fetch pending approval announcements (facilitators only)
   const { data: pendingAnnouncements = [], refetch: refetchPending } = useQuery({
     queryKey: ["pending-announcements", classroom.id],
     queryFn: () =>
-      base44.entities.Announcement.filter({
+      entities.Announcement.filter({
         classroom_id: classroom.id,
         status: "pending_approval",
       }),
@@ -66,7 +66,7 @@ export default function AnnouncementsSection({ classroom }) {
   const handlePublishAnnouncement = async () => {
     if (!announcementContent.trim()) return;
     setLoading(true);
-    await base44.entities.Announcement.create({
+    await entities.Announcement.create({
       classroom_id: classroom.id,
       author_id: user?.id,
       author_name: user?.full_name,
@@ -87,7 +87,7 @@ export default function AnnouncementsSection({ classroom }) {
   const handleRequestPost = async () => {
     if (!requestContent.trim()) return;
     setLoading(true);
-    await base44.entities.Announcement.create({
+    await entities.Announcement.create({
       classroom_id: classroom.id,
       author_id: user?.id,
       author_name: user?.full_name,
@@ -104,7 +104,7 @@ export default function AnnouncementsSection({ classroom }) {
   };
 
   const handleApprovePost = async (announcementId) => {
-    await base44.entities.Announcement.update(announcementId, {
+    await entities.Announcement.update(announcementId, {
       status: "published",
     });
     refetchAnnouncements();
@@ -112,12 +112,12 @@ export default function AnnouncementsSection({ classroom }) {
   };
 
   const handleDenyPost = async (announcementId) => {
-    await base44.entities.Announcement.delete(announcementId);
+    await entities.Announcement.delete(announcementId);
     refetchPending();
   };
 
   const handleDeleteAnnouncement = async (announcementId) => {
-    await base44.entities.Announcement.delete(announcementId);
+    await entities.Announcement.delete(announcementId);
     refetchAnnouncements();
   };
 

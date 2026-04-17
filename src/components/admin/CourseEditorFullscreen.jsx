@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { base44 } from "@/api/base44Client";
+import { entities } from "@/api/entities";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,7 +44,7 @@ export default function CourseEditorFullscreen({ yearLevel, onClose }) {
   const { data: dbCourseDetails = null } = useQuery({
     queryKey: ["course-details", yearLevel.key],
     queryFn: async () => {
-      const results = await base44.entities.CourseDetails.filter({
+      const results = await entities.CourseDetails.filter({
         year_level_key: yearLevel.key
       });
       return results[0] || null;
@@ -98,7 +98,7 @@ export default function CourseEditorFullscreen({ yearLevel, onClose }) {
     queryKey: ["lesson-content", yearLevel.key, selectedLessonNum],
     queryFn: () => {
       if (!selectedLessonNum) return null;
-      return base44.entities.LessonContent.filter({
+      return entities.LessonContent.filter({
         year_level_key: yearLevel.key,
         lesson_number: selectedLessonNum
       }).then(results => results[0] || null);
@@ -229,12 +229,12 @@ export default function CourseEditorFullscreen({ yearLevel, onClose }) {
 
       // Save course details if on Course Details tab
       if (selectedLessonNum === null) {
-        const existing = await base44.entities.CourseDetails.filter({
+        const existing = await entities.CourseDetails.filter({
           year_level_key: yearLevel.key
         });
 
         if (existing.length > 0) {
-          await base44.entities.CourseDetails.update(existing[0].id, {
+          await entities.CourseDetails.update(existing[0].id, {
             subtitle: details.subtitle,
             quote: details.quote,
             quoteAuthor: details.quoteAuthor,
@@ -242,7 +242,7 @@ export default function CourseEditorFullscreen({ yearLevel, onClose }) {
             objectives: details.objectives
           });
         } else {
-          await base44.entities.CourseDetails.create({
+          await entities.CourseDetails.create({
             year_level_key: yearLevel.key,
             subtitle: details.subtitle,
             quote: details.quote,
@@ -255,18 +255,18 @@ export default function CourseEditorFullscreen({ yearLevel, onClose }) {
 
       // Save lesson content if a lesson is selected
       if (selectedLessonNum) {
-        const existingContent = await base44.entities.LessonContent.filter({
+        const existingContent = await entities.LessonContent.filter({
           year_level_key: yearLevel.key,
           lesson_number: selectedLessonNum
         });
 
         if (existingContent.length > 0) {
-          await base44.entities.LessonContent.update(existingContent[0].id, {
+          await entities.LessonContent.update(existingContent[0].id, {
             sections: sections,
             lesson_objectives: lessonObjectives
           });
         } else {
-          await base44.entities.LessonContent.create({
+          await entities.LessonContent.create({
             year_level_key: yearLevel.key,
             lesson_number: selectedLessonNum,
             sections: sections,
@@ -281,7 +281,7 @@ export default function CourseEditorFullscreen({ yearLevel, onClose }) {
       setInitialLessonObjectives(JSON.parse(JSON.stringify(lessonObjectives)));
 
       // Save lessons + details to Courseware entity (single source of truth)
-      const existingCw = await base44.entities.Courseware.filter({ key: yearLevel.key });
+      const existingCw = await entities.Courseware.filter({ key: yearLevel.key });
       const cwPayload = {
         lessons,
         subtitle: details.subtitle,
@@ -291,9 +291,9 @@ export default function CourseEditorFullscreen({ yearLevel, onClose }) {
         objectives: details.objectives,
       };
       if (existingCw.length > 0) {
-        await base44.entities.Courseware.update(existingCw[0].id, cwPayload);
+        await entities.Courseware.update(existingCw[0].id, cwPayload);
       } else {
-        await base44.entities.Courseware.create({
+        await entities.Courseware.create({
           key: yearLevel.key,
           grade: yearLevel.grade,
           segment: yearLevel.segment || "",

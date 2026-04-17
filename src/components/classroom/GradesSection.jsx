@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { entities } from "@/api/entities";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -51,9 +51,9 @@ function LessonGradeCard({ lesson, classroom, enrollments, allProgress, lessonAc
 
   const toggleRetakes = async () => {
     if (access) {
-      await base44.entities.LessonAccess.update(access.id, { retakes_enabled: !retakesEnabled });
+      await entities.LessonAccess.update(access.id, { retakes_enabled: !retakesEnabled });
     } else {
-      await base44.entities.LessonAccess.create({
+      await entities.LessonAccess.create({
         classroom_id: classroom.id,
         year_level_key: classroom.year_level_key,
         lesson_number: lesson.num,
@@ -68,14 +68,14 @@ function LessonGradeCard({ lesson, classroom, enrollments, allProgress, lessonAc
   const updateMaxRetakes = async (val) => {
     const num = val === "unlimited" ? null : parseInt(val);
     if (access) {
-      await base44.entities.LessonAccess.update(access.id, { max_retakes: num });
+      await entities.LessonAccess.update(access.id, { max_retakes: num });
       refetchAll();
     }
   };
 
   const handleRetakeAction = async (prog, approved) => {
     if (approved) {
-      await base44.entities.StudentLessonProgress.update(prog.id, {
+      await entities.StudentLessonProgress.update(prog.id, {
         retake_requested: false,
         retake_approved: true,
         status: "retake_in_progress",
@@ -83,7 +83,7 @@ function LessonGradeCard({ lesson, classroom, enrollments, allProgress, lessonAc
         retake_attempts: (prog.retake_attempts || 0) + 1,
       });
     } else {
-      await base44.entities.StudentLessonProgress.update(prog.id, {
+      await entities.StudentLessonProgress.update(prog.id, {
         retake_requested: false,
         retake_approved: false,
         status: "completed",
@@ -241,17 +241,17 @@ export default function GradesSection({ classroom }) {
 
   const { data: enrollments = [], refetch: refetchEnrollments } = useQuery({
     queryKey: ["classroom-enrollments-for-grades", classroom.id],
-    queryFn: () => base44.entities.Enrollment.filter({ classroom_id: classroom.id, status: "approved" }),
+    queryFn: () => entities.Enrollment.filter({ classroom_id: classroom.id, status: "approved" }),
   });
 
   const { data: allProgress = [], refetch: refetchProgress } = useQuery({
     queryKey: ["classroom-progress-grades", classroom.id],
-    queryFn: () => base44.entities.StudentLessonProgress.filter({ classroom_id: classroom.id }),
+    queryFn: () => entities.StudentLessonProgress.filter({ classroom_id: classroom.id }),
   });
 
   const { data: lessonAccessList = [], refetch: refetchAccess } = useQuery({
     queryKey: ["lesson-access-grades", classroom.id],
-    queryFn: () => base44.entities.LessonAccess.filter({ classroom_id: classroom.id }),
+    queryFn: () => entities.LessonAccess.filter({ classroom_id: classroom.id }),
   });
 
   const refetchAll = () => { refetchProgress(); refetchAccess(); };

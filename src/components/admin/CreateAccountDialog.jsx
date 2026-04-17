@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { entities } from "@/api/entities";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -23,14 +23,10 @@ export default function CreateAccountDialog({ open, onClose, onCreated }) {
 
     setLoading(true);
     try {
-      // Platform only accepts "user" or "admin" — map custom app roles accordingly
-      const platformRole = form.role === "admin" ? "admin" : "user";
-      await base44.users.inviteUser(form.email.trim(), platformRole);
-
       // Pre-create a UserAccount so the intended app role is ready when they first log in
-      const existing = await base44.entities.UserAccount.filter({ email: form.email.trim() });
+      const existing = await entities.UserAccount.filter({ email: form.email.trim() });
       if (existing.length === 0) {
-        await base44.entities.UserAccount.create({
+        await entities.UserAccount.create({
           email: form.email.trim(),
           role: form.role,
           facilitator_status: form.role === "facilitator" ? "approved" : "none",
@@ -39,10 +35,10 @@ export default function CreateAccountDialog({ open, onClose, onCreated }) {
 
       // If student + classroom code provided, create a pending enrollment
       if (form.role === "student" && form.classroomCode.trim()) {
-        const classrooms = await base44.entities.Classroom.filter({ enrollment_code: form.classroomCode.trim().toUpperCase() });
+        const classrooms = await entities.Classroom.filter({ enrollment_code: form.classroomCode.trim().toUpperCase() });
         if (classrooms.length > 0) {
           const classroom = classrooms[0];
-          await base44.entities.Enrollment.create({
+          await entities.Enrollment.create({
             classroom_id: classroom.id,
             student_id: "", // will be filled when student accepts invite and logs in
             student_email: form.email.trim(),

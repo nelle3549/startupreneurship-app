@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { entities } from "@/api/entities";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,7 +48,7 @@ export default function CourseEditorV2({ yearLevel, onClose }) {
     queryKey: ["lesson-content", yearLevel.key, selectedLessonNum],
     queryFn: () => {
       if (!selectedLessonNum) return null;
-      return base44.entities.LessonContent.filter({
+      return entities.LessonContent.filter({
         year_level_key: yearLevel.key,
         lesson_number: selectedLessonNum
       }).then(results => results[0] || null);
@@ -88,18 +88,18 @@ export default function CourseEditorV2({ yearLevel, onClose }) {
       }
       setIsSaving(true);
       
-      const existingContent = await base44.entities.LessonContent.filter({
+      const existingContent = await entities.LessonContent.filter({
         year_level_key: yearLevel.key,
         lesson_number: selectedLessonNum
       });
 
       if (existingContent.length > 0) {
-        await base44.entities.LessonContent.update(existingContent[0].id, {
+        await entities.LessonContent.update(existingContent[0].id, {
           sections: sections,
           lesson_objectives: lessonObjectives
         });
       } else {
-        await base44.entities.LessonContent.create({
+        await entities.LessonContent.create({
           year_level_key: yearLevel.key,
           lesson_number: selectedLessonNum,
           sections: sections,

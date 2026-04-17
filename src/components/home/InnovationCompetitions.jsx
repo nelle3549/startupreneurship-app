@@ -2,7 +2,7 @@ import React from "react";
 import { Trophy, ExternalLink, Calendar, MapPin } from "lucide-react";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { entities } from "@/api/entities";
 
 const tagColors = [
   { color: "bg-red-50 border-red-200", tagColor: "bg-red-100 text-red-700" },
@@ -15,7 +15,7 @@ const tagColors = [
 export default function InnovationCompetitions() {
   const { data: competitions = [] } = useQuery({
     queryKey: ["competitions"],
-    queryFn: () => base44.entities.Competition.list("order"),
+    queryFn: () => entities.Competition.list("order"),
   });
 
   const visible = competitions.filter(c => !c.hidden);

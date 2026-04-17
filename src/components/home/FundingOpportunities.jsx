@@ -3,13 +3,13 @@ import { DollarSign, Calendar } from "lucide-react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { entities } from "@/api/entities";
 
 export default function FundingOpportunities() {
   const navigate = useNavigate();
   const { data: opportunities = [] } = useQuery({
     queryKey: ["funding-opportunities"],
-    queryFn: () => base44.entities.FundingOpportunity.list("order"),
+    queryFn: () => entities.FundingOpportunity.list("order"),
   });
 
   const visible = opportunities.filter(o => !o.hidden);

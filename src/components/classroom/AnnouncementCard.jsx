@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { entities } from "@/api/entities";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCurrentUser } from "@/components/useCurrentUser";
 import { Card, CardContent } from "@/components/ui/card";
@@ -66,14 +66,14 @@ export default function AnnouncementCard({
   const { data: comments = [] } = useQuery({
     queryKey: ["announcement-comments", announcement.id],
     queryFn: () =>
-      base44.entities.Comment.filter({ announcement_id: announcement.id }),
+      entities.Comment.filter({ announcement_id: announcement.id }),
   });
 
   // Fetch reactions
   const { data: reactions = [] } = useQuery({
     queryKey: ["announcement-reactions", announcement.id],
     queryFn: () =>
-      base44.entities.Reaction.filter({ announcement_id: announcement.id }),
+      entities.Reaction.filter({ announcement_id: announcement.id }),
   });
 
   const reactionSummary = EMOJI_OPTIONS.map((emoji) => {
@@ -91,9 +91,9 @@ export default function AnnouncementCard({
       (r) => r.emoji === emoji && r.user_id === user?.id
     );
     if (existing) {
-      await base44.entities.Reaction.delete(existing.id);
+      await entities.Reaction.delete(existing.id);
     } else {
-      await base44.entities.Reaction.create({
+      await entities.Reaction.create({
         announcement_id: announcement.id,
         user_id: user?.id,
         user_name: user?.full_name,
@@ -107,7 +107,7 @@ export default function AnnouncementCard({
 
   const handleAddComment = async () => {
     if (!newComment.trim()) return;
-    await base44.entities.Comment.create({
+    await entities.Comment.create({
       announcement_id: announcement.id,
       author_id: user?.id,
       author_name: user?.full_name,
@@ -122,7 +122,7 @@ export default function AnnouncementCard({
   };
 
   const handleDeleteComment = async (commentId) => {
-    await base44.entities.Comment.delete(commentId);
+    await entities.Comment.delete(commentId);
     queryClient.invalidateQueries({
       queryKey: ["announcement-comments", announcement.id],
     });
@@ -130,7 +130,7 @@ export default function AnnouncementCard({
 
   const handleSaveEdit = async () => {
     if (!editingContent?.trim()) return;
-    await base44.entities.Announcement.update(announcement.id, {
+    await entities.Announcement.update(announcement.id, {
       content: editingContent,
     });
     setEditDialog(false);

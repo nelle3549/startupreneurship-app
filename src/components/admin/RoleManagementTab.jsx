@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { entities } from "@/api/entities";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -28,17 +28,17 @@ export default function RoleManagementTab() {
 
   const { data: users = [] } = useQuery({
     queryKey: ["admin-users-role-mgmt"],
-    queryFn: () => base44.entities.User.list(),
+    queryFn: () => entities.User.list(),
   });
 
   const { data: classrooms = [] } = useQuery({
     queryKey: ["admin-classrooms-for-enrollment"],
-    queryFn: () => base44.entities.Classroom.list(),
+    queryFn: () => entities.Classroom.list(),
   });
 
   const updateUserMutation = useMutation({
     mutationFn: ({ id, role, facilitator_status, school, classroom_id }) => 
-      base44.entities.User.update(id, { 
+      entities.User.update(id, { 
         role, 
         ...(facilitator_status && { facilitator_status }),
         ...(school && { school }),

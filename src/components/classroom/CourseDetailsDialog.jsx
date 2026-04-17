@@ -1,5 +1,5 @@
 import React from "react";
-import { base44 } from "@/api/base44Client";
+import { entities } from "@/api/entities";
 import { useQuery } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { X } from "lucide-react";
@@ -8,7 +8,7 @@ export default function CourseDetailsDialog({ yearLevelKey, isOpen, onClose }) {
   const { data: courseDetails } = useQuery({
     queryKey: ["course-details", yearLevelKey],
     queryFn: () =>
-      base44.entities.CourseDetails.filter({
+      entities.CourseDetails.filter({
         year_level_key: yearLevelKey,
       }).then(results => results[0] || null),
     enabled: isOpen && !!yearLevelKey,

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { entities } from "@/api/entities";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -26,7 +26,7 @@ export default function MCQCompletionPage({
   const mcqAttempts = allAttempts.length;
 
   // Retake eligibility
-  const lessonAccessQuery = base44.entities.LessonAccess.filter({
+  const lessonAccessQuery = entities.LessonAccess.filter({
     classroom_id: classroom.id,
     year_level_key: yearLevelKey,
     lesson_number: lessonNumber,
@@ -36,7 +36,7 @@ export default function MCQCompletionPage({
     setLoading(true);
     try {
       // Update progress with retake request
-      await base44.entities.StudentLessonProgress.update(studentProgress.id, {
+      await entities.StudentLessonProgress.update(studentProgress.id, {
         retake_requested: true,
         status: "retake_requested",
       });
@@ -51,7 +51,7 @@ export default function MCQCompletionPage({
 
   const handleStartRetake = () => {
     // Update status to retake_in_progress and trigger retake
-    base44.entities.StudentLessonProgress.update(studentProgress.id, {
+    entities.StudentLessonProgress.update(studentProgress.id, {
       status: "retake_in_progress",
     }).then(() => {
       queryClient.invalidateQueries({ queryKey: ["student-lesson-progress"] });

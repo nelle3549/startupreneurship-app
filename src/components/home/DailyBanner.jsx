@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { Sparkles, Share2, Check } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { entities } from "@/api/entities";
 
 const FALLBACK_QUOTES = [
   { text: "The secret of getting ahead is getting started.", author: "Mark Twain" },
@@ -44,11 +44,11 @@ export default function DailyBanner() {
 
   const { data: dbQuotes = [] } = useQuery({
     queryKey: ["quotes"],
-    queryFn: () => base44.entities.Quote.list("order"),
+    queryFn: () => entities.Quote.list("order"),
   });
 
   const archiveMutation = useMutation({
-    mutationFn: (data) => base44.entities.HistoryArchive.create(data),
+    mutationFn: (data) => entities.HistoryArchive.create(data),
   });
 
   const quote = useMemo(() => getDayQuote(dbQuotes), [dbQuotes]);

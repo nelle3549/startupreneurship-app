@@ -2,7 +2,24 @@
   "permissions": {
     "allow": [
       "Bash(gh auth:*)",
-      "Bash(ls -la \"/Users/nelle/Documents/Claude/Projects/Startupreneurship App/.env\"*)"
+      "Bash(ls -la \"/Users/nelle/Documents/Claude/Projects/Startupreneurship App/.env\"*)",
+      "Bash(brew install:*)",
+      "Read(//opt/homebrew/bin/**)",
+      "Read(//usr/local/bin/**)",
+      "Bash(git --version)",
+      "Bash(curl -sL https://github.com/cli/cli/releases/latest/download/gh_2.67.0_macOS_arm64.zip -o /tmp/gh.zip)",
+      "Bash(unzip -o /tmp/gh.zip -d /tmp/gh)",
+      "Bash(curl -sI \"https://github.com/cli/cli/releases/latest\")",
+      "Bash(curl -sL \"https://github.com/cli/cli/releases/download/v2.89.0/gh_2.89.0_macOS_arm64.zip\" -o /tmp/gh.zip)",
+      "Bash(export PATH=\"/tmp/gh/gh_2.89.0_macOS_arm64/bin:$PATH\")",
+      "Bash(gh --version)",
+      "Bash(gh repo:*)",
+      "mcp__052e04a2-c708-4d4d-9517-9632bcc7c91b__deploy_to_vercel",
+      "Bash(npx vercel:*)",
+      "mcp__052e04a2-c708-4d4d-9517-9632bcc7c91b__list_teams",
+      "Bash(mdfind \"kMDItemFSName == 'node'\")",
+      "Bash(export PATH=\"/tmp/node-v22.15.0-darwin-arm64/bin:/tmp/gh/gh_2.89.0_macOS_arm64/bin:$PATH\")",
+      "Bash(npm --version)"
     ]
   }
 }

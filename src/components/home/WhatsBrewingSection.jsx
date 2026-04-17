@@ -2,7 +2,7 @@ import React from "react";
 import { BookOpen } from "lucide-react";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { entities } from "@/api/entities";
 
 const cardColors = [
   { bg: "bg-blue-50 border-blue-200", tag: "bg-blue-100 text-blue-700" },
@@ -16,7 +16,7 @@ const cardColors = [
 export default function WhatsBrewingSection() {
   const { data: articles = [] } = useQuery({
     queryKey: ["articles"],
-    queryFn: () => base44.entities.Article.list("order"),
+    queryFn: () => entities.Article.list("order"),
   });
 
   const visible = articles.filter(a => !a.hidden);

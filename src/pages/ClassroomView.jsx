@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { entities } from "@/api/entities";
 import { useQuery } from "@tanstack/react-query";
 import { useCurrentUser } from "@/components/useCurrentUser";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
@@ -28,7 +28,7 @@ export default function ClassroomView() {
 
   const { data: classroom, isLoading: classroomLoading } = useQuery({
     queryKey: ["classroom", classroomId],
-    queryFn: () => base44.entities.Classroom.list().then(classrooms => 
+    queryFn: () => entities.Classroom.list().then(classrooms => 
       classrooms.find(c => c.id === classroomId)
     ),
     enabled: !!classroomId,
@@ -36,7 +36,7 @@ export default function ClassroomView() {
 
   const { data: enrollments = [] } = useQuery({
     queryKey: ["classroom-enrollments-access", classroomId],
-    queryFn: () => base44.entities.Enrollment.filter({ classroom_id: classroomId }),
+    queryFn: () => entities.Enrollment.filter({ classroom_id: classroomId }),
     enabled: !!classroomId,
   });
 

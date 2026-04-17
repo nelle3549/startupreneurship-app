@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { base44 } from "@/api/base44Client";
+import { entities } from "@/api/entities";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -17,13 +17,13 @@ export default function ProgressTrackingTab({ classrooms, selectedClassroom }) {
 
   const { data: enrollments = [] } = useQuery({
     queryKey: ["classroom-enrollments", selectedClassroom],
-    queryFn: () => base44.entities.Enrollment.filter({ classroom_id: selectedClassroom, status: "approved" }),
+    queryFn: () => entities.Enrollment.filter({ classroom_id: selectedClassroom, status: "approved" }),
     enabled: !!selectedClassroom,
   });
 
   const { data: progress = [] } = useQuery({
     queryKey: ["student-progress", selectedClassroom],
-    queryFn: () => base44.entities.StudentLessonProgress.filter({ classroom_id: selectedClassroom }),
+    queryFn: () => entities.StudentLessonProgress.filter({ classroom_id: selectedClassroom }),
     enabled: !!selectedClassroom,
   });
 

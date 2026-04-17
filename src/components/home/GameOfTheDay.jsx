@@ -4,7 +4,7 @@ import AchievementDialog from "./AchievementDialog";
 import { Button } from "@/components/ui/button";
 import { getSavedUser } from "../userStorage";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { entities } from "@/api/entities";
 import LoginSignup from "../registration/LoginSignup";
 
 const FALLBACK_WORDS = [
@@ -255,11 +255,11 @@ export default function GameOfTheDay() {
 
   const { data: dbWords = [] } = useQuery({
     queryKey: ["wordle-words"],
-    queryFn: () => base44.entities.WordleWord.list("order"),
+    queryFn: () => entities.WordleWord.list("order"),
   });
 
   const archiveMutation = useMutation({
-    mutationFn: (data) => base44.entities.HistoryArchive.create(data),
+    mutationFn: (data) => entities.HistoryArchive.create(data),
   });
 
   const dayGame = getDayWord(dbWords);

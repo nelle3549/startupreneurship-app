@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { entities } from "@/api/entities";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +13,7 @@ export default function ClassroomHeader({ classroom }) {
   const { data: facilitator } = useQuery({
     queryKey: ["facilitator", classroom.facilitator_id],
     queryFn: async () => {
-      const accounts = await base44.entities.UserAccount.filter({
+      const accounts = await entities.UserAccount.filter({
         user_id: classroom.facilitator_id,
       });
       return accounts.length > 0 ? accounts[0] : null;
@@ -23,7 +23,7 @@ export default function ClassroomHeader({ classroom }) {
   const { data: enrollments = [] } = useQuery({
     queryKey: ["classroom-enrollments-header", classroom.id],
     queryFn: () =>
-      base44.entities.Enrollment.filter({
+      entities.Enrollment.filter({
         classroom_id: classroom.id,
         status: "approved",
       }),

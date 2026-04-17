@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { entities } from "@/api/entities";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,7 +18,7 @@ export default function LessonManagementTab({ classrooms, selectedClassroom }) {
 
   const { data: lessonAccess = [] } = useQuery({
     queryKey: ["lesson-access", selectedClassroom],
-    queryFn: () => base44.entities.LessonAccess.filter({ classroom_id: selectedClassroom }),
+    queryFn: () => entities.LessonAccess.filter({ classroom_id: selectedClassroom }),
     enabled: !!selectedClassroom,
   });
 
@@ -26,9 +26,9 @@ export default function LessonManagementTab({ classrooms, selectedClassroom }) {
     mutationFn: async ({ lessonNum, isOpen }) => {
       const existing = lessonAccess.find(la => la.lesson_number === lessonNum);
       if (existing) {
-        return base44.entities.LessonAccess.update(existing.id, { is_open: isOpen });
+        return entities.LessonAccess.update(existing.id, { is_open: isOpen });
       } else {
-        return base44.entities.LessonAccess.create({
+        return entities.LessonAccess.create({
           classroom_id: selectedClassroom,
           year_level_key: classroom.year_level_key,
           lesson_number: lessonNum,

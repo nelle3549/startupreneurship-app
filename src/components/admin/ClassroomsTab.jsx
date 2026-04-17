@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { entities } from "@/api/entities";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -26,16 +26,16 @@ export default function ClassroomsTab() {
 
   const { data: classrooms = [] } = useQuery({
     queryKey: ["admin-classrooms"],
-    queryFn: () => base44.entities.Classroom.list(),
+    queryFn: () => entities.Classroom.list(),
   });
 
   const { data: users = [] } = useQuery({
     queryKey: ["admin-users-facilitators"],
-    queryFn: () => base44.entities.UserAccount.list(),
+    queryFn: () => entities.UserAccount.list(),
   });
 
   const createClassroomMutation = useMutation({
-    mutationFn: (data) => base44.entities.Classroom.create(data),
+    mutationFn: (data) => entities.Classroom.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-classrooms"] });
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
@@ -44,7 +44,7 @@ export default function ClassroomsTab() {
   });
 
   const updateClassroomMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Classroom.update(id, data),
+    mutationFn: ({ id, data }) => entities.Classroom.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-classrooms"] });
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
@@ -53,7 +53,7 @@ export default function ClassroomsTab() {
   });
 
   const deleteClassroomMutation = useMutation({
-    mutationFn: (id) => base44.entities.Classroom.delete(id),
+    mutationFn: (id) => entities.Classroom.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-classrooms"] });
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });

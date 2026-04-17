@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { entities } from "@/api/entities";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -111,35 +111,35 @@ function ContentTable({ entity, fields, emptyMsg, renderItemExtra, enableArchive
 
   const { data: items = [], isLoading } = useQuery({
     queryKey: qKey,
-    queryFn: () => base44.entities[entity].list("order"),
+    queryFn: () => entities[entity].list("order"),
   });
 
   const createMutation = useMutation({
-    mutationFn: d => base44.entities[entity].create(d),
+    mutationFn: d => entities[entity].create(d),
     onSuccess: () => { qc.invalidateQueries({ queryKey: qKey }); setAdding(false); setForm({}); },
   });
   const saveMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities[entity].update(id, data),
+    mutationFn: ({ id, data }) => entities[entity].update(id, data),
     onSuccess: () => { qc.invalidateQueries({ queryKey: qKey }); setEditId(null); setForm({}); },
   });
   const patchMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities[entity].update(id, data),
+    mutationFn: ({ id, data }) => entities[entity].update(id, data),
     onSuccess: () => qc.invalidateQueries({ queryKey: qKey }),
   });
   const deleteMutation = useMutation({
-    mutationFn: id => base44.entities[entity].delete(id),
+    mutationFn: id => entities[entity].delete(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: qKey }),
   });
   const archiveMutation = useMutation({
     mutationFn: async (item) => {
-      await base44.entities.HistoryArchive.create({
+      await entities.HistoryArchive.create({
         content_type: archiveContentType,
         content_id: item.id,
         title: item.title || item.word || item.text?.slice(0, 60) || "Untitled",
         featured_date: item.scheduled_date || new Date().toISOString().split("T")[0],
         meta: { ...item },
       });
-      await base44.entities[entity].update(item.id, { hidden: true });
+      await entities[entity].update(item.id, { hidden: true });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qKey });
@@ -186,14 +186,14 @@ function ContentTable({ entity, fields, emptyMsg, renderItemExtra, enableArchive
     const today = new Date().toISOString().split("T")[0];
     const pastItems = items.filter(i => i.scheduled_date && i.scheduled_date < today);
     pastItems.forEach(async (item) => {
-      await base44.entities.HistoryArchive.create({
+      await entities.HistoryArchive.create({
         content_type: archiveContentType,
         content_id: item.id,
         title: item.title || item.word || item.text?.slice(0, 60) || "Untitled",
         featured_date: item.scheduled_date,
         meta: { ...item },
       });
-      await base44.entities[entity].delete(item.id);
+      await entities[entity].delete(item.id);
     });
     if (pastItems.length > 0) {
       setTimeout(() => {

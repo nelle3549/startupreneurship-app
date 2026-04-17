@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { entities } from "@/api/entities";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -25,7 +25,7 @@ export default function Portal() {
   // Students with approved enrollments can also access Portal
   const { data: studentEnrollments = [] } = useQuery({
     queryKey: ["student-enrollments", authUser?.email],
-    queryFn: () => base44.entities.Enrollment.filter({ student_email: authUser?.email, status: "approved" }),
+    queryFn: () => entities.Enrollment.filter({ student_email: authUser?.email, status: "approved" }),
     enabled: !!authUser?.email && !isFacilitatorUser,
   });
   
@@ -41,12 +41,12 @@ export default function Portal() {
   const facilitatorId = authUser?.id;
   const { data: classrooms = [] } = useQuery({
     queryKey: ["classrooms", facilitatorId],
-    queryFn: () => base44.entities.Classroom.filter({ facilitator_id: facilitatorId }),
+    queryFn: () => entities.Classroom.filter({ facilitator_id: facilitatorId }),
     enabled: !!facilitatorId && isFacilitatorUser,
   });
   const { data: enrollments = [] } = useQuery({
     queryKey: ["enrollments-all"],
-    queryFn: () => base44.entities.Enrollment.list(),
+    queryFn: () => entities.Enrollment.list(),
     enabled: isFacilitatorUser,
   });
   
@@ -54,7 +54,7 @@ export default function Portal() {
   const { data: studentClassrooms = [] } = useQuery({
     queryKey: ["student-classrooms", authUser?.id],
     queryFn: async () => {
-      const allClassrooms = await base44.entities.Classroom.list();
+      const allClassrooms = await entities.Classroom.list();
       return allClassrooms.filter(c => 
         studentEnrollments.some(e => e.classroom_id === c.id)
       );

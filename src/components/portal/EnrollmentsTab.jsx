@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { base44 } from "@/api/base44Client";
+import { entities } from "@/api/entities";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,18 +11,18 @@ export default function EnrollmentsTab({ facilitatorId }) {
 
   const { data: classrooms = [] } = useQuery({
     queryKey: ["classrooms", facilitatorId],
-    queryFn: () => base44.entities.Classroom.filter({ facilitator_id: facilitatorId }),
+    queryFn: () => entities.Classroom.filter({ facilitator_id: facilitatorId }),
     enabled: !!facilitatorId,
   });
 
   const { data: enrollments = [], isLoading } = useQuery({
     queryKey: ["enrollments-all", classrooms.map(c => c.id).join(',')],
-    queryFn: () => base44.entities.Enrollment.list(),
+    queryFn: () => entities.Enrollment.list(),
     enabled: !!facilitatorId && classrooms.length > 0,
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, status }) => base44.entities.Enrollment.update(id, { status }),
+    mutationFn: ({ id, status }) => entities.Enrollment.update(id, { status }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["enrollments-all"] });
     },

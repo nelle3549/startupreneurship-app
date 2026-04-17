@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { entities } from "@/api/entities";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -26,18 +26,18 @@ export default function StudentsTab({ facilitatorId, selectedClassroom, onClearC
 
   const { data: classrooms = [] } = useQuery({
     queryKey: ["classrooms", facilitatorId],
-    queryFn: () => base44.entities.Classroom.filter({ facilitator_id: facilitatorId }),
+    queryFn: () => entities.Classroom.filter({ facilitator_id: facilitatorId }),
     enabled: !!facilitatorId,
   });
 
   const { data: enrollments = [], isLoading: enrollmentsLoading } = useQuery({
     queryKey: ["enrollments-all"],
-    queryFn: () => base44.entities.Enrollment.list(),
+    queryFn: () => entities.Enrollment.list(),
   });
 
   const { data: allUsers = [] } = useQuery({
     queryKey: ["users-list"],
-    queryFn: () => base44.entities.User.list(),
+    queryFn: () => entities.User.list(),
   });
 
   const myClassroomIds = new Set(classrooms.map(c => c.id));
@@ -48,13 +48,13 @@ export default function StudentsTab({ facilitatorId, selectedClassroom, onClearC
   const userMap = useMemo(() => Object.fromEntries(allUsers.map(u => [u.id, u])), [allUsers]);
 
   const deleteEnrollmentMutation = useMutation({
-    mutationFn: (enrollmentId) => base44.entities.Enrollment.delete(enrollmentId),
+    mutationFn: (enrollmentId) => entities.Enrollment.delete(enrollmentId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["enrollments-all"] }),
   });
 
   const transferEnrollmentMutation = useMutation({
     mutationFn: ({ enrollmentId, newClassroomId }) => 
-      base44.entities.Enrollment.update(enrollmentId, { classroom_id: newClassroomId }),
+      entities.Enrollment.update(enrollmentId, { classroom_id: newClassroomId }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["enrollments-all"] });
       setShowTransferModal(null);
@@ -65,7 +65,7 @@ export default function StudentsTab({ facilitatorId, selectedClassroom, onClearC
     mutationFn: ({ email, classroomId }) => {
       const user = allUsers.find(u => u.email === email);
       if (!user) throw new Error("User not found");
-      return base44.entities.Enrollment.create({
+      return entities.Enrollment.create({
         classroom_id: classroomId,
         student_id: user.id,
         student_email: user.email,

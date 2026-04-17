@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { entities } from "@/api/entities";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,8 +18,8 @@ function CreateCoursewareModal({ onClose }) {
 
   const createMutation = useMutation({
     mutationFn: async (data) => {
-      const cw = await base44.entities.Courseware.create(data);
-      await base44.entities.CourseDetails.create({
+      const cw = await entities.Courseware.create(data);
+      await entities.CourseDetails.create({
         year_level_key: data.key,
         subtitle: data.subtitle || "Enter a subtitle for this course",
         summary: data.summary || "A brief overview of what students will learn in this course.",
@@ -110,9 +110,9 @@ export default function CoursewaresTab() {
     mutationFn: async ({ cw, archive }) => {
       const existing = dbMap[cw.key];
       if (existing) {
-        return base44.entities.Courseware.update(existing.id, { status: archive ? "archived" : "active" });
+        return entities.Courseware.update(existing.id, { status: archive ? "archived" : "active" });
       }
-      return base44.entities.Courseware.create({
+      return entities.Courseware.create({
         key: cw.key, grade: cw.grade, subtitle: cw.subtitle,
         segment: cw.segment, summary: cw.summary, status: "archived"
       });
@@ -122,7 +122,7 @@ export default function CoursewaresTab() {
 
   const duplicateMutation = useMutation({
     mutationFn: async ({ cw, newKey }) => {
-      return base44.entities.Courseware.create({
+      return entities.Courseware.create({
         key: newKey,
         grade: dupName || `${cw.grade} (Copy)`,
         subtitle: cw.subtitle,
@@ -146,7 +146,7 @@ export default function CoursewaresTab() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Courseware.delete(id),
+    mutationFn: (id) => entities.Courseware.delete(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["coursewares"] }),
   });
 

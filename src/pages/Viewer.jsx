@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import { base44 } from "@/api/base44Client";
+import { entities } from "@/api/entities";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -82,7 +82,7 @@ export default function Viewer() {
 
   const { data: slides = [] } = useQuery({
     queryKey: ["presentation-slides"],
-    queryFn: () => base44.entities.PresentationSlide.list("order"),
+    queryFn: () => entities.PresentationSlide.list("order"),
     initialData: []
   });
 
@@ -94,7 +94,7 @@ export default function Viewer() {
   const { data: lessonAccess = [], isLoading: accessLoading } = useQuery({
     queryKey: ["lesson-access", classroomId, yearLevelKey],
     queryFn: () => classroomId 
-      ? base44.entities.LessonAccess.filter({ classroom_id: classroomId, year_level_key: yearLevelKey })
+      ? entities.LessonAccess.filter({ classroom_id: classroomId, year_level_key: yearLevelKey })
       : Promise.resolve([]),
     enabled: !!classroomId,
   });
@@ -102,7 +102,7 @@ export default function Viewer() {
   // Fetch all student progress for this classroom (needed for sequential completion check)
   const { data: allMyProgress = [], isLoading: progressLoading } = useQuery({
     queryKey: ["all-my-progress-viewer", classroomId, yearLevelKey, user?.id],
-    queryFn: () => base44.entities.StudentLessonProgress.filter({
+    queryFn: () => entities.StudentLessonProgress.filter({
       classroom_id: classroomId,
       student_id: user.id,
       year_level_key: yearLevelKey,
@@ -113,7 +113,7 @@ export default function Viewer() {
   // Fetch lesson content from database (only for numbered lessons)
   const { data: dbLessonContent = null } = useQuery({
     queryKey: ["lesson-content-viewer", yearLevelKey, lessonNumber],
-    queryFn: () => base44.entities.LessonContent.filter({
+    queryFn: () => entities.LessonContent.filter({
       year_level_key: yearLevelKey,
       lesson_number: lessonNumber
     }).then(results => results[0] || null),
@@ -123,7 +123,7 @@ export default function Viewer() {
   // Fetch course details for Lesson 0
   const { data: courseDetails = null } = useQuery({
     queryKey: ["course-details-viewer", yearLevelKey],
-    queryFn: () => base44.entities.CourseDetails.filter({ year_level_key: yearLevelKey }).then(r => r[0] || null),
+    queryFn: () => entities.CourseDetails.filter({ year_level_key: yearLevelKey }).then(r => r[0] || null),
     enabled: lessonNumber === 0,
   });
 
@@ -134,7 +134,7 @@ export default function Viewer() {
   const { data: currentStudentProgress } = useQuery({
     queryKey: ["current-student-progress", classroomId, yearLevelKey, lessonNumber, user?.id],
     queryFn: () => classroomId && user?.id
-      ? base44.entities.StudentLessonProgress.filter({
+      ? entities.StudentLessonProgress.filter({
           classroom_id: classroomId,
           student_id: user.id,
           year_level_key: yearLevelKey,
@@ -198,7 +198,7 @@ export default function Viewer() {
         setStepIdx(next);
         // Save in-progress to StudentLessonProgress (students only)
         if (classroomId && user?.id && isStudent) {
-          base44.entities.StudentLessonProgress.filter({
+          entities.StudentLessonProgress.filter({
             classroom_id: classroomId,
             student_id: user.id,
             year_level_key: yearLevelKey,
@@ -206,9 +206,9 @@ export default function Viewer() {
           }).then((existing) => {
             const data = { current_step_index: next, total_steps: steps.length };
             if (existing.length > 0) {
-              base44.entities.StudentLessonProgress.update(existing[0].id, data);
+              entities.StudentLessonProgress.update(existing[0].id, data);
             } else {
-              base44.entities.StudentLessonProgress.create({
+              entities.StudentLessonProgress.create({
                 classroom_id: classroomId,
                 student_id: user.id,
                 year_level_key: yearLevelKey,
@@ -244,7 +244,7 @@ export default function Viewer() {
     // Save StudentLessonProgress if in a classroom context (students only)
     if (classroomId && user?.id && isStudent) {
       try {
-        const existing = await base44.entities.StudentLessonProgress.filter({
+        const existing = await entities.StudentLessonProgress.filter({
           classroom_id: classroomId,
           student_id: user.id,
           year_level_key: yearLevelKey,
@@ -275,9 +275,9 @@ export default function Viewer() {
           all_scores: newAllScores,
         };
         if (existing.length > 0) {
-          await base44.entities.StudentLessonProgress.update(existing[0].id, progressData);
+          await entities.StudentLessonProgress.update(existing[0].id, progressData);
         } else {
-          await base44.entities.StudentLessonProgress.create({
+          await entities.StudentLessonProgress.create({
             classroom_id: classroomId,
             student_id: user.id,
             year_level_key: yearLevelKey,
@@ -293,7 +293,7 @@ export default function Viewer() {
 
     // Log activity
     try {
-      await base44.entities.UserActivity.create({
+      await entities.UserActivity.create({
         activity_type: "lesson_completed",
         activity_details: { year_level_key: yearLevelKey, lesson_number: lessonNumber }
       });
@@ -318,7 +318,7 @@ export default function Viewer() {
     }
     // Save in-progress state to StudentLessonProgress (students only)
     if (classroomId && user?.id && isStudent) {
-      base44.entities.StudentLessonProgress.filter({
+      entities.StudentLessonProgress.filter({
         classroom_id: classroomId,
         student_id: user.id,
         year_level_key: yearLevelKey,
@@ -357,9 +357,9 @@ export default function Viewer() {
         };
         
         if (existing.length > 0) {
-          base44.entities.StudentLessonProgress.update(existing[0].id, data);
+          entities.StudentLessonProgress.update(existing[0].id, data);
         } else {
-          base44.entities.StudentLessonProgress.create({
+          entities.StudentLessonProgress.create({
             classroom_id: classroomId,
             student_id: user.id,
             year_level_key: yearLevelKey,

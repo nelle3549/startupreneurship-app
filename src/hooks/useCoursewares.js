@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { entities } from "@/api/entities";
 import { YEAR_LEVELS } from "@/components/data/courseData";
 
 /**
@@ -10,7 +10,7 @@ import { YEAR_LEVELS } from "@/components/data/courseData";
 export function useCoursewares({ includeArchived = false } = {}) {
   const { data: dbCoursewares = [], isLoading } = useQuery({
     queryKey: ["coursewares"],
-    queryFn: () => base44.entities.Courseware.list(),
+    queryFn: () => entities.Courseware.list(),
     staleTime: 1000 * 60 * 5,
   });
 

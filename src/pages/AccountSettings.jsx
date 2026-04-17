@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { entities } from "@/api/entities";
+import { supabase } from "@/api/supabaseClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -117,7 +118,7 @@ export default function AccountSettings() {
     
     // Save to UserAccount entity (single source of truth)
     if (authUser?.account_id) {
-      await base44.entities.UserAccount.update(authUser.account_id, {
+      await entities.UserAccount.update(authUser.account_id, {
         first_name: updatedUser.first_name,
         last_name: updatedUser.last_name,
         extension: updatedUser.extension,
@@ -149,8 +150,8 @@ export default function AccountSettings() {
     deleteAllProgress();
     clearSavedUser();
     localStorage.clear();
-    await base44.functions.invoke('deleteUserAndData', { targetUserId: authUser.id });
-    base44.auth.logout("/");
+    // TODO: implement server-side user data cleanup via Supabase Edge Function
+    supabase.auth.signOut().then(() => window.location.href = "/");
   };
 
   return (
@@ -389,7 +390,7 @@ export default function AccountSettings() {
             className="w-full flex items-center gap-4 px-6 py-4 hover:bg-gray-50 transition-colors border-t border-gray-100"
             onClick={() => { 
               clearSavedUser(); 
-              base44.auth.logout("/");
+              supabase.auth.signOut().then(() => window.location.href = "/");
             }}
           >
             <div className="w-9 h-9 rounded-xl bg-gray-100 flex items-center justify-center">

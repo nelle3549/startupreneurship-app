@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { entities } from "@/api/entities";
 import { useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -39,21 +39,21 @@ export default function LessonManagementDialog({
     for (let i = 1; i < lesson.num; i++) {
       const prev = lessonAccess.find((la) => la.lesson_number === i);
       if (!prev) {
-        await base44.entities.LessonAccess.create({
+        await entities.LessonAccess.create({
           classroom_id: classroom.id,
           year_level_key: classroom.year_level_key,
           lesson_number: i,
           is_open: true,
         });
       } else if (!prev.is_open) {
-        await base44.entities.LessonAccess.update(prev.id, { is_open: true });
+        await entities.LessonAccess.update(prev.id, { is_open: true });
       }
     }
 
     if (access) {
-      await base44.entities.LessonAccess.update(access.id, { is_open: true });
+      await entities.LessonAccess.update(access.id, { is_open: true });
     } else {
-      await base44.entities.LessonAccess.create({
+      await entities.LessonAccess.create({
         classroom_id: classroom.id,
         year_level_key: classroom.year_level_key,
         lesson_number: lesson.num,
@@ -63,7 +63,7 @@ export default function LessonManagementDialog({
 
     // Auto-post announcement
     try {
-      await base44.entities.Announcement.create({
+      await entities.Announcement.create({
         classroom_id: classroom.id,
         author_id: "system",
         author_name: classroom.facilitator_id ? "System" : "Classroom",

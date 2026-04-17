@@ -1,5 +1,5 @@
 import React from "react";
-import { base44 } from "@/api/base44Client";
+import { entities } from "@/api/entities";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,7 +12,7 @@ export default function StudentListSection({ classroom, isFacilitator }) {
 
   const { data: enrollments = [] } = useQuery({
     queryKey: ["classroom-enrollments", classroom.id],
-    queryFn: () => base44.entities.Enrollment.filter({ classroom_id: classroom.id }),
+    queryFn: () => entities.Enrollment.filter({ classroom_id: classroom.id }),
   });
 
   const filteredStudents = enrollments.filter(e =>

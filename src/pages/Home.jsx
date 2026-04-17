@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Users, Shield, UserCircle, BookOpen, Flame } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { entities } from "@/api/entities";
 import { ICON_URL } from "../components/data/courseData";
 import { getSavedUser } from "../components/userStorage";
 import { useCurrentUser } from "../components/useCurrentUser";
@@ -35,7 +35,7 @@ export default function Home() {
 
   const { data: studentEnrollments = [] } = useQuery({
     queryKey: ["student-enrollments", authUser?.email],
-    queryFn: () => base44.entities.Enrollment.filter({ student_email: authUser?.email, status: "approved" }),
+    queryFn: () => entities.Enrollment.filter({ student_email: authUser?.email, status: "approved" }),
     enabled: !!authUser?.email && !isAdmin && !isFacilitator,
   });
 
@@ -43,7 +43,7 @@ export default function Home() {
     queryKey: ["enrolled-classrooms", studentEnrollments.map(e => e.classroom_id).join(',')],
     queryFn: async () => {
       if (studentEnrollments.length === 0) return [];
-      const allClassrooms = await base44.entities.Classroom.list();
+      const allClassrooms = await entities.Classroom.list();
       return allClassrooms.filter(c =>
         studentEnrollments.some(e => e.classroom_id === c.id)
       );

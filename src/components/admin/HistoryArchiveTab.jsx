@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { entities } from "@/api/entities";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -12,7 +12,7 @@ export default function HistoryArchiveTab() {
 
   const { data: archives = [], isLoading } = useQuery({
     queryKey: ["history-archive"],
-    queryFn: () => base44.entities.HistoryArchive.list("-featured_date"),
+    queryFn: () => entities.HistoryArchive.list("-featured_date"),
   });
 
   const filtered = archives.filter(a =>

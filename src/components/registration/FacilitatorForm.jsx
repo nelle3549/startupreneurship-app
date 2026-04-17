@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ChevronLeft, Clock } from "lucide-react";
 import { saveUser, getSavedUser } from "../userStorage";
-import { base44 } from "@/api/base44Client";
+import { entities } from "@/api/entities";
 
 export default function FacilitatorForm({ onBack, onComplete }) {
   const [submitted, setSubmitted] = useState(false);
@@ -25,9 +25,9 @@ export default function FacilitatorForm({ onBack, onComplete }) {
     setLoading(true);
     try {
       // Find and update UserAccount record
-      const accounts = await base44.entities.UserAccount.filter({ email: currentUser.email });
+      const accounts = await entities.UserAccount.filter({ email: currentUser.email });
       if (accounts.length > 0) {
-        await base44.entities.UserAccount.update(accounts[0].id, {
+        await entities.UserAccount.update(accounts[0].id, {
           role: "facilitator",
           facilitator_status: "pending",
         });

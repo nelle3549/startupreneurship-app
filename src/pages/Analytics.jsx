@@ -1,6 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { entities } from "@/api/entities";
 import { useQuery } from "@tanstack/react-query";
 import { useCurrentUser } from "@/components/useCurrentUser";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,7 +19,7 @@ export default function Analytics() {
   // Fetch enrollments
   const { data: enrollments = [], isLoading: enrollmentsLoading } = useQuery({
     queryKey: ["student-enrollments", user?.email],
-    queryFn: () => base44.entities.Enrollment.list(),
+    queryFn: () => entities.Enrollment.list(),
     enabled: !!user?.email,
     select: (data) => data.filter(e => e.student_email === user?.email && e.status === "approved"),
   });
@@ -27,7 +27,7 @@ export default function Analytics() {
   // Fetch classrooms
   const { data: classrooms = [], isLoading: classroomsLoading } = useQuery({
     queryKey: ["classrooms"],
-    queryFn: () => base44.entities.Classroom.list(),
+    queryFn: () => entities.Classroom.list(),
   });
 
   // Get enrolled classrooms with course info

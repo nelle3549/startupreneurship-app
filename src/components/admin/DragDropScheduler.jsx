@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { entities } from "@/api/entities";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { GripVertical, Calendar } from "lucide-react";
@@ -33,7 +33,7 @@ export default function DragDropScheduler({ entity, items, renderContent, onSche
   const [isApplying, setIsApplying] = useState(false);
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities[entity].update(id, data),
+    mutationFn: ({ id, data }) => entities[entity].update(id, data),
     onSuccess: () => qc.invalidateQueries({ queryKey: [`content-${entity}`] }),
   });
 

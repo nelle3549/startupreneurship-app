@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { entities } from "@/api/entities";
 import { useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -28,17 +28,17 @@ export default function UserActionDialog({ open, onClose, user }) {
     // Handle side effects BEFORE changing role
     if (user.role === "facilitator" && selectedRole !== "facilitator") {
       // Archive classrooms owned by this facilitator
-      const ownedClassrooms = await base44.entities.Classroom.filter({ facilitator_id: user.id });
+      const ownedClassrooms = await entities.Classroom.filter({ facilitator_id: user.id });
       for (const c of ownedClassrooms) {
-        await base44.entities.Classroom.update(c.id, { is_archived: true });
+        await entities.Classroom.update(c.id, { is_archived: true });
       }
     }
 
     if (user.role === "student" && selectedRole !== "student") {
       // Remove all enrollment records for this user
-      const enrollments = await base44.entities.Enrollment.filter({ student_id: user.id });
+      const enrollments = await entities.Enrollment.filter({ student_id: user.id });
       for (const e of enrollments) {
-        await base44.entities.Enrollment.delete(e.id);
+        await entities.Enrollment.delete(e.id);
       }
     }
 
@@ -51,14 +51,14 @@ export default function UserActionDialog({ open, onClose, user }) {
     }
 
     // Update both User entity and UserAccount entity
-    await base44.entities.User.update(user.id, updateData);
+    await entities.User.update(user.id, updateData);
     if (user.email) {
-      const accounts = await base44.entities.UserAccount.filter({ email: user.email });
+      const accounts = await entities.UserAccount.filter({ email: user.email });
       if (accounts.length > 0) {
         const accountUpdate = { role: selectedRole };
         if (updateData.facilitator_status !== undefined) accountUpdate.facilitator_status = updateData.facilitator_status;
         if (schoolName && selectedRole === "facilitator") accountUpdate.school_organization = schoolName;
-        await base44.entities.UserAccount.update(accounts[0].id, accountUpdate);
+        await entities.UserAccount.update(accounts[0].id, accountUpdate);
       }
     }
 
@@ -74,7 +74,8 @@ export default function UserActionDialog({ open, onClose, user }) {
     const name = [user.first_name, user.last_name].filter(Boolean).join(" ") || user.email || "this user";
     if (!confirm(`Permanently delete account for ${name}? This cannot be undone.`)) return;
     setLoading(true);
-    await base44.functions.invoke('deleteUserAndData', { targetUserId: user.id });
+    // TODO: implement server-side user data cleanup via Supabase Edge Function
+    await entities.User.delete(user.id);
     queryClient.invalidateQueries({ queryKey: ["admin-users"] });
     queryClient.invalidateQueries({ queryKey: ["admin-user-accounts"] });
     setLoading(false);

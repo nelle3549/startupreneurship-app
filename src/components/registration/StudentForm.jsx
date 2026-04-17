@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ChevronLeft, QrCode, Hash, Clock, Trash2 } from "lucide-react";
 import { saveUser, getSavedUser } from "../userStorage";
-import { base44 } from "@/api/base44Client";
+import { entities } from "@/api/entities";
 import { useQuery } from "@tanstack/react-query";
 
 export default function StudentForm({ onBack, onComplete }) {
@@ -25,7 +25,7 @@ export default function StudentForm({ onBack, onComplete }) {
   // Fetch pending enrollments for this user
   const { data: enrollments = [], isLoading: enrollmentsLoading } = useQuery({
     queryKey: ["student-enrollments", currentUser?.email],
-    queryFn: () => base44.entities.Enrollment.list(),
+    queryFn: () => entities.Enrollment.list(),
     enabled: !!currentUser?.email,
     select: (data) => data.filter(e => e.student_email === currentUser?.email && e.status === "pending"),
   });
@@ -50,7 +50,7 @@ export default function StudentForm({ onBack, onComplete }) {
     setLoading(true);
     try {
       // Find classroom by code
-      const classrooms = await base44.entities.Classroom.list();
+      const classrooms = await entities.Classroom.list();
       const classroom = classrooms.find(c => c.enrollment_code === formData.classroom_code.toUpperCase());
       
       if (!classroom) {
@@ -60,7 +60,7 @@ export default function StudentForm({ onBack, onComplete }) {
       }
 
       // Create enrollment request
-      const enrollment = await base44.entities.Enrollment.create({
+      const enrollment = await entities.Enrollment.create({
         classroom_id: classroom.id,
         student_id: currentUser.id || "",
         student_email: currentUser.email || "",
@@ -69,9 +69,9 @@ export default function StudentForm({ onBack, onComplete }) {
       });
 
       // Update UserAccount record
-      const accounts = await base44.entities.UserAccount.filter({ email: currentUser.email });
+      const accounts = await entities.UserAccount.filter({ email: currentUser.email });
       if (accounts.length > 0) {
-        await base44.entities.UserAccount.update(accounts[0].id, { role: "student" });
+        await entities.UserAccount.update(accounts[0].id, { role: "student" });
       }
 
       saveUser({ ...currentUser, role: "student" });
@@ -92,7 +92,7 @@ export default function StudentForm({ onBack, onComplete }) {
   const handleCancelEnrollment = async () => {
     if (!pendingEnrollment?.id) return;
     try {
-      await base44.entities.Enrollment.delete(pendingEnrollment.id);
+      await entities.Enrollment.delete(pendingEnrollment.id);
       setPendingEnrollment(null);
       setShowPendingDialog(false);
     } catch (err) {

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { entities } from "@/api/entities";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCurrentUser } from "../components/useCurrentUser";
 import { Button } from "@/components/ui/button";
@@ -39,13 +39,13 @@ export default function Admin() {
 
   const { data: rawUsers = [] } = useQuery({
     queryKey: ["admin-users"],
-    queryFn: () => base44.entities.User.list(),
+    queryFn: () => entities.User.list(),
     enabled: isAdmin,
   });
 
   const { data: allUserAccounts = [] } = useQuery({
     queryKey: ["admin-user-accounts"],
-    queryFn: () => base44.entities.UserAccount.list(),
+    queryFn: () => entities.UserAccount.list(),
     enabled: isAdmin,
   });
 
@@ -64,24 +64,24 @@ export default function Admin() {
 
   const { data: classrooms = [] } = useQuery({
     queryKey: ["admin-classrooms-for-enrollment"],
-    queryFn: () => base44.entities.Classroom.list(),
+    queryFn: () => entities.Classroom.list(),
     enabled: isAdmin,
   });
 
   const updateUserMutation = useMutation({
     mutationFn: async ({ id, data }) => {
       // Update built-in User entity
-      await base44.entities.User.update(id, data);
+      await entities.User.update(id, data);
       // Sync role/facilitator_status to UserAccount entity
       const user = allUsers.find(u => u.id === id);
       if (user?.email) {
-        const accounts = await base44.entities.UserAccount.filter({ email: user.email });
+        const accounts = await entities.UserAccount.filter({ email: user.email });
         if (accounts.length > 0) {
           const accountUpdate = {};
           if (data.role !== undefined) accountUpdate.role = data.role;
           if (data.facilitator_status !== undefined) accountUpdate.facilitator_status = data.facilitator_status;
           if (Object.keys(accountUpdate).length > 0) {
-            await base44.entities.UserAccount.update(accounts[0].id, accountUpdate);
+            await entities.UserAccount.update(accounts[0].id, accountUpdate);
           }
         }
       }

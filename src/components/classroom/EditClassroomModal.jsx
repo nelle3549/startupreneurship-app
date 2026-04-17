@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { entities } from "@/api/entities";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,7 +31,7 @@ export default function EditClassroomModal({ classroom, onClose, onSuccess }) {
   const queryClient = useQueryClient();
 
   const updateMutation = useMutation({
-    mutationFn: (data) => base44.entities.Classroom.update(classroom.id, data),
+    mutationFn: (data) => entities.Classroom.update(classroom.id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["classrooms"] });
       queryClient.invalidateQueries({ queryKey: ["classroom", classroom.id] });
