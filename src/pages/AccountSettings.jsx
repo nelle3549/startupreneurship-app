@@ -65,6 +65,28 @@ export default function AccountSettings() {
     return getSavedUser() || {};
   });
 
+  // Sync form when authUser loads from database (including userAccount merge)
+  useEffect(() => {
+    if (authUser?.id && authUser?.account_id) {
+      const updated = {
+        id: authUser.id,
+        email: authUser.email,
+        full_name: authUser.full_name,
+        first_name: authUser.first_name || "",
+        last_name: authUser.last_name || "",
+        extension: authUser.extension || "",
+        gender: authUser.gender || "",
+        school_organization: authUser.school_organization || "",
+        province: authUser.province || "",
+        city_municipality: authUser.city_municipality || "",
+        role: authUser.role,
+        facilitator_status: authUser.facilitator_status,
+      };
+      setCurrentUser(updated);
+      setForm(getInitialForm(updated));
+    }
+  }, [authUser?.account_id]);
+
   const refreshUser = () => setCurrentUser(getSavedUser() || {});
 
   const accountType = isAdmin
