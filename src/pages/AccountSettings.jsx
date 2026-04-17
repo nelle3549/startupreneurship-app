@@ -244,11 +244,11 @@ export default function AccountSettings() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-medium text-gray-500 block mb-1.5">Province</label>
+                <label className="text-xs font-medium text-gray-500 block mb-1.5">Region</label>
                 <Input
                   value={form.province}
                   onChange={(e) => handleChange("province", e.target.value)}
-                  placeholder="Province"
+                  placeholder="Region"
                 />
               </div>
               <div>

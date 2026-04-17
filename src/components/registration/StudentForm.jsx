@@ -1,18 +1,20 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ChevronLeft, QrCode, Hash, Clock, Trash2 } from "lucide-react";
+import { ChevronLeft, Hash, Clock, Trash2 } from "lucide-react";
 import { saveUser, getSavedUser } from "../userStorage";
+import { useCurrentUser } from "../useCurrentUser";
 import { entities } from "@/api/entities";
 import { useQuery } from "@tanstack/react-query";
 
 export default function StudentForm({ onBack, onComplete }) {
   const [loading, setLoading] = useState(false);
-  const [codeMethod, setCodeMethod] = useState("type"); // "type" | "qr"
-  const currentUser = getSavedUser() || {};
-  
-  // Check if personal info is complete
-  const hasPersonalInfo = currentUser.first_name && currentUser.last_name && currentUser.gender && currentUser.school_organization;
+  const { user: dbUser, userAccount } = useCurrentUser();
+  const currentUser = dbUser || getSavedUser() || {};
+
+  // Check if personal info is complete — use userAccount (database) as source of truth
+  const hasPersonalInfo = (userAccount?.first_name && userAccount?.last_name && userAccount?.gender && userAccount?.school_organization)
+    || (currentUser.first_name && currentUser.last_name && currentUser.gender && currentUser.school_organization);
   
   const [formData, setFormData] = useState({
     classroom_code: "",
@@ -267,65 +269,24 @@ export default function StudentForm({ onBack, onComplete }) {
 
           {/* Classroom Code Section */}
           <div>
-            <label className="text-sm font-medium text-gray-700 block mb-2">Join Classroom *</label>
-            <div className="flex gap-2 mb-3">
-              <button
-                type="button"
-                onClick={() => setCodeMethod("type")}
-                className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl border-2 text-sm font-medium transition-all ${
-                  codeMethod === "type" ? "border-blue-400 bg-blue-50 text-blue-700" : "border-gray-200 text-gray-500 hover:border-gray-300"
-                }`}
-              >
-                <Hash className="w-4 h-4" />
-                Enter Code
-              </button>
-              <button
-                type="button"
-                onClick={() => setCodeMethod("qr")}
-                className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl border-2 text-sm font-medium transition-all ${
-                  codeMethod === "qr" ? "border-blue-400 bg-blue-50 text-blue-700" : "border-gray-200 text-gray-500 hover:border-gray-300"
-                }`}
-              >
-                <QrCode className="w-4 h-4" />
-                Scan QR
-              </button>
-            </div>
-
-            {codeMethod === "type" && (
-              <Input
-                name="classroom_code"
-                value={formData.classroom_code}
-                onChange={handleChange}
-                placeholder="e.g. ABC-1234"
-                className="font-mono text-center text-lg tracking-widest uppercase"
-                required
-              />
-            )}
-
-            {codeMethod === "qr" && (
-              <div className="border-2 border-dashed border-gray-300 rounded-2xl p-8 text-center bg-gray-50">
-                <QrCode className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-                <p className="text-sm text-gray-500 font-medium">QR Scanner</p>
-                <p className="text-xs text-gray-400 mt-1">Point your camera at the QR code provided by your facilitator</p>
-                <p className="text-xs text-amber-600 mt-3 font-medium">📱 QR scanning requires camera access (coming soon)</p>
-                <button
-                  type="button"
-                  onClick={() => setCodeMethod("type")}
-                  className="mt-3 text-xs text-blue-600 underline"
-                >
-                  Enter code manually instead
-                </button>
-              </div>
-            )}
+            <label className="text-sm font-medium text-gray-700 block mb-2">Classroom Code *</label>
+            <Input
+              name="classroom_code"
+              value={formData.classroom_code}
+              onChange={handleChange}
+              placeholder="e.g. ABC-1234"
+              className="font-mono text-center text-lg tracking-widest uppercase"
+              required
+            />
           </div>
 
           <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-xs text-blue-800">
-            <strong>Don't have a code?</strong> Ask your teacher or facilitator for the classroom code or QR to join.
+            <strong>Don't have a code?</strong> Ask your teacher or facilitator for the classroom code to join.
           </div>
 
           <Button
             type="submit"
-            disabled={loading || (codeMethod === "type" && !formData.classroom_code)}
+            disabled={loading || !formData.classroom_code}
             className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-full"
           >
             {loading ? "Joining..." : "Join Classroom"}

@@ -3,15 +3,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ChevronLeft, Clock } from "lucide-react";
 import { saveUser, getSavedUser } from "../userStorage";
+import { useCurrentUser } from "../useCurrentUser";
 import { entities } from "@/api/entities";
 
 export default function FacilitatorForm({ onBack, onComplete }) {
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
-  const currentUser = getSavedUser() || {};
-  
-  // Check if personal info is complete
-  const hasPersonalInfo = currentUser.first_name && currentUser.last_name && currentUser.gender && currentUser.school_organization;
+  const { user: dbUser, userAccount } = useCurrentUser();
+  const currentUser = dbUser || getSavedUser() || {};
+
+  // Check if personal info is complete — use userAccount (database) as source of truth
+  const hasPersonalInfo = (userAccount?.first_name && userAccount?.last_name && userAccount?.gender && userAccount?.school_organization)
+    || (currentUser.first_name && currentUser.last_name && currentUser.gender && currentUser.school_organization);
   
   const [formData, setFormData] = useState({});
 
