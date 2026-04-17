@@ -29,8 +29,20 @@ export default function ClassroomHeader({ classroom }) {
       }),
   });
 
-  const handleCopyCode = () => {
-    navigator.clipboard.writeText(classroom.enrollment_code);
+  const handleCopyCode = async () => {
+    try {
+      await navigator.clipboard.writeText(classroom.enrollment_code);
+    } catch {
+      // Fallback for non-HTTPS or unsupported browsers
+      const textarea = document.createElement("textarea");
+      textarea.value = classroom.enrollment_code;
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+    }
     setCopied(true);
     toast({
       title: "Copied!",
