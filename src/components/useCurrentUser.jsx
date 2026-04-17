@@ -26,18 +26,20 @@ export function useCurrentUser() {
   const { data: userAccount, isLoading: accountLoading } = useQuery({
     queryKey: ["user-account", authUser?.email],
     queryFn: async () => {
+      // Check if user_account already exists
       const accounts = await entities.UserAccount.filter({ email: authUser.email });
       if (accounts.length > 0) return accounts[0];
 
-      // Check the users table for role (may have been set by admin)
+      // Get the public.users record (created by trigger) to get the correct ID and role
       const dbUsers = await entities.User.filter({ email: authUser.email });
       const dbUser = dbUsers.length > 0 ? dbUsers[0] : null;
       const dbRole = dbUser?.role || "guest";
+      const publicUserId = dbUser?.id || null;
 
       // Auto-create UserAccount on first login
       const hasName = !!(authUser.first_name && authUser.last_name);
       return await entities.UserAccount.create({
-        user_id: authUser.id,
+        user_id: publicUserId,  // FK to public.users.id, NOT auth.users.id
         email: authUser.email,
         first_name: authUser.first_name || "",
         last_name: authUser.last_name || "",
