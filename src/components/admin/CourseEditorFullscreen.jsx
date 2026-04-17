@@ -845,11 +845,11 @@ export default function CourseEditorFullscreen({ yearLevel, onClose }) {
                           </Button>
                         </div>
 
-                        {section.type === "text" && (
+                        {(section.type === "text" || section.type === "image" || section.type === "video") && (
                           <div className="border border-gray-200 rounded">
                             <ReactQuill
                               theme="snow"
-                              value={section.content}
+                              value={section.content || ""}
                               onChange={content => updateSection(section.id, { content })}
                               modules={modules}
                               className="bg-white"
