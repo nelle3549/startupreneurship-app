@@ -86,3 +86,31 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Quill video embeds — render as responsive aspect-ratio iframes */
+.prose iframe,
+.ql-editor iframe {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 0.75rem;
+  border: 1px solid #e5e7eb;
+  margin: 1rem 0;
+}
+
+/* Quill editor images */
+.prose img {
+  border-radius: 0.75rem;
+  border: 1px solid #e5e7eb;
+  max-width: 100%;
+  height: auto;
+  margin: 1rem auto;
+  display: block;
+}
+
+/* Quill video wrapper */
+.ql-video {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 0.75rem;
+  border: 1px solid #e5e7eb;
+}

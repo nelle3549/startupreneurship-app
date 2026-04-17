@@ -22,14 +22,16 @@ import {
 } from "@/components/ui/alert-dialog";
 
 const modules = {
-  toolbar: [
-    [{ header: [1, 2, 3, false] }],
-    ["bold", "italic", "underline", "strike"],
-    ["blockquote", "code-block"],
-    [{ list: "ordered" }, { list: "bullet" }],
-    ["link", "image"],
-    ["clean"]
-  ]
+  toolbar: {
+    container: [
+      [{ header: [1, 2, 3, false] }],
+      ["bold", "italic", "underline", "strike"],
+      ["blockquote", "code-block"],
+      [{ list: "ordered" }, { list: "bullet" }],
+      ["link", "image", "video"],
+      ["clean"]
+    ],
+  },
 };
 
 export default function CourseEditorFullscreen({ yearLevel, onClose }) {
@@ -751,15 +753,7 @@ export default function CourseEditorFullscreen({ yearLevel, onClose }) {
                   <div className="flex gap-2 flex-wrap">
                     <Button onClick={addSection} size="sm" className="bg-blue-600 text-white gap-1">
                       <Plus className="w-3 h-3" />
-                      Text
-                    </Button>
-                    <Button onClick={() => addTypedSection("image")} size="sm" className="bg-emerald-600 text-white gap-1">
-                      <Plus className="w-3 h-3" />
-                      Image
-                    </Button>
-                    <Button onClick={() => addTypedSection("video")} size="sm" className="bg-rose-600 text-white gap-1">
-                      <Plus className="w-3 h-3" />
-                      Video
+                      Content
                     </Button>
                     <Button onClick={() => addTypedSection("callout")} size="sm" className="bg-amber-600 text-white gap-1">
                       <Plus className="w-3 h-3" />
@@ -767,7 +761,7 @@ export default function CourseEditorFullscreen({ yearLevel, onClose }) {
                     </Button>
                     <Button onClick={() => addActivity("mcq")} size="sm" disabled={countGradedActivities() >= 1} className={`gap-1 text-white ${countGradedActivities() >= 1 ? "bg-gray-400" : "bg-purple-600"}`}>
                       <HelpCircle className="w-3 h-3" />
-                      MCQ (Graded)
+                      MCQ
                     </Button>
                     <Button onClick={() => addActivity("micro_validation")} size="sm" className="bg-cyan-600 text-white gap-1">
                       <HelpCircle className="w-3 h-3" />
@@ -782,13 +776,10 @@ export default function CourseEditorFullscreen({ yearLevel, onClose }) {
                     <p className="text-xs text-gray-500 mb-4">Add a section above to start building this lesson.</p>
                     <div className="flex justify-center gap-2 flex-wrap">
                       <Button onClick={addSection} size="sm" variant="outline" className="gap-1">
-                        <Plus className="w-3 h-3" /> Text
+                        <Plus className="w-3 h-3" /> Content
                       </Button>
-                      <Button onClick={() => addTypedSection("image")} size="sm" variant="outline" className="gap-1">
-                        <Plus className="w-3 h-3" /> Image
-                      </Button>
-                      <Button onClick={() => addTypedSection("video")} size="sm" variant="outline" className="gap-1">
-                        <Plus className="w-3 h-3" /> Video
+                      <Button onClick={() => addTypedSection("callout")} size="sm" variant="outline" className="gap-1">
+                        <Plus className="w-3 h-3" /> Callout
                       </Button>
                     </div>
                   </div>
@@ -822,9 +813,7 @@ export default function CourseEditorFullscreen({ yearLevel, onClose }) {
                               }}
                               className="border border-gray-200 rounded px-2 py-1 text-xs"
                             >
-                              <option value="text">Text</option>
-                              <option value="image">Image</option>
-                              <option value="video">Video</option>
+                              <option value="text">Content</option>
                               <option value="callout">Callout</option>
                               <option value="mcq">MCQ</option>
                               <option value="micro_validation">Micro Validation</option>
@@ -865,78 +854,6 @@ export default function CourseEditorFullscreen({ yearLevel, onClose }) {
                               modules={modules}
                               className="bg-white"
                             />
-                          </div>
-                        )}
-
-                        {section.type === "image" && (
-                          <div className="space-y-3">
-                            <div>
-                              <label className="text-xs text-gray-500 block mb-1">Image URL *</label>
-                              <Input
-                                value={section.src || ""}
-                                onChange={e => updateSection(section.id, { src: e.target.value })}
-                                placeholder="https://... or /images/photo.png"
-                              />
-                            </div>
-                            <div className="grid grid-cols-2 gap-3">
-                              <div>
-                                <label className="text-xs text-gray-500 block mb-1">Alt Text</label>
-                                <Input
-                                  value={section.alt || ""}
-                                  onChange={e => updateSection(section.id, { alt: e.target.value })}
-                                  placeholder="Image description"
-                                />
-                              </div>
-                              <div>
-                                <label className="text-xs text-gray-500 block mb-1">Caption</label>
-                                <Input
-                                  value={section.caption || ""}
-                                  onChange={e => updateSection(section.id, { caption: e.target.value })}
-                                  placeholder="Optional caption"
-                                />
-                              </div>
-                            </div>
-                            {section.src && (
-                              <img src={section.src} alt={section.alt || ""} className="max-h-48 rounded border object-contain" />
-                            )}
-                            <div>
-                              <label className="text-xs text-gray-500 block mb-1">Text below image (optional)</label>
-                              <div className="border border-gray-200 rounded">
-                                <ReactQuill theme="snow" value={section.content || ""} onChange={content => updateSection(section.id, { content })} modules={modules} className="bg-white" />
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {section.type === "video" && (
-                          <div className="space-y-3">
-                            <div>
-                              <label className="text-xs text-gray-500 block mb-1">YouTube Embed URL *</label>
-                              <Input
-                                value={section.src || ""}
-                                onChange={e => updateSection(section.id, { src: e.target.value })}
-                                placeholder="https://www.youtube.com/embed/VIDEO_ID"
-                              />
-                            </div>
-                            <div>
-                              <label className="text-xs text-gray-500 block mb-1">Caption</label>
-                              <Input
-                                value={section.caption || ""}
-                                onChange={e => updateSection(section.id, { caption: e.target.value })}
-                                placeholder="Optional caption"
-                              />
-                            </div>
-                            {section.src && (
-                              <div className="aspect-video rounded border overflow-hidden bg-black">
-                                <iframe src={section.src} className="w-full h-full" allowFullScreen />
-                              </div>
-                            )}
-                            <div>
-                              <label className="text-xs text-gray-500 block mb-1">Discussion questions / notes (optional)</label>
-                              <div className="border border-gray-200 rounded">
-                                <ReactQuill theme="snow" value={section.content || ""} onChange={content => updateSection(section.id, { content })} modules={modules} className="bg-white" />
-                              </div>
-                            </div>
                           </div>
                         )}
 
