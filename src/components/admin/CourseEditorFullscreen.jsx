@@ -334,6 +334,20 @@ export default function CourseEditorFullscreen({ yearLevel, onClose }) {
     });
   };
 
+  const addTypedSection = (type) => {
+    const defaults = {
+      image: { type: "image", title: "", src: "", alt: "", caption: "", content: "" },
+      video: { type: "video", title: "", src: "", caption: "", content: "" },
+      callout: { type: "callout", title: "", content: "", style: "action" },
+    };
+    const newSection = { id: `section-${Date.now()}`, ...defaults[type] };
+    setSections(prev => {
+      const gradedIdx = prev.findIndex(s => s.type === "activity" && s.activity_type === "mcq");
+      if (gradedIdx !== -1) return [...prev.slice(0, gradedIdx), newSection, ...prev.slice(gradedIdx)];
+      return [...prev, newSection];
+    });
+  };
+
   const insertSectionAfter = (idx) => {
     const newSection = {
       id: `section-${Date.now()}`,
@@ -733,6 +747,18 @@ export default function CourseEditorFullscreen({ yearLevel, onClose }) {
                       <Plus className="w-3 h-3" />
                       Text
                     </Button>
+                    <Button onClick={() => addTypedSection("image")} size="sm" className="bg-emerald-600 text-white gap-1">
+                      <Plus className="w-3 h-3" />
+                      Image
+                    </Button>
+                    <Button onClick={() => addTypedSection("video")} size="sm" className="bg-rose-600 text-white gap-1">
+                      <Plus className="w-3 h-3" />
+                      Video
+                    </Button>
+                    <Button onClick={() => addTypedSection("callout")} size="sm" className="bg-amber-600 text-white gap-1">
+                      <Plus className="w-3 h-3" />
+                      Callout
+                    </Button>
                     <Button onClick={() => addActivity("mcq")} size="sm" disabled={countGradedActivities() >= 1} className={`gap-1 text-white ${countGradedActivities() >= 1 ? "bg-gray-400" : "bg-purple-600"}`}>
                       <HelpCircle className="w-3 h-3" />
                       MCQ (Graded)
@@ -761,11 +787,21 @@ export default function CourseEditorFullscreen({ yearLevel, onClose }) {
                             </span>
                           ) : (
                             <select
-                              value={section.activity_type || section.type}
-                              onChange={e => updateSection(section.id, { activity_type: e.target.value })}
+                              value={section.type === "activity" ? section.activity_type : section.type}
+                              onChange={e => {
+                                const val = e.target.value;
+                                if (["mcq", "micro_validation"].includes(val)) {
+                                  updateSection(section.id, { type: "activity", activity_type: val });
+                                } else {
+                                  updateSection(section.id, { type: val, activity_type: undefined });
+                                }
+                              }}
                               className="border border-gray-200 rounded px-2 py-1 text-xs"
                             >
                               <option value="text">Text</option>
+                              <option value="image">Image</option>
+                              <option value="video">Video</option>
+                              <option value="callout">Callout</option>
                               <option value="mcq">MCQ</option>
                               <option value="micro_validation">Micro Validation</option>
                             </select>
@@ -800,6 +836,99 @@ export default function CourseEditorFullscreen({ yearLevel, onClose }) {
                               modules={modules}
                               className="bg-white"
                             />
+                          </div>
+                        )}
+
+                        {section.type === "image" && (
+                          <div className="space-y-3">
+                            <div>
+                              <label className="text-xs text-gray-500 block mb-1">Image URL *</label>
+                              <Input
+                                value={section.src || ""}
+                                onChange={e => updateSection(section.id, { src: e.target.value })}
+                                placeholder="https://... or /images/photo.png"
+                              />
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="text-xs text-gray-500 block mb-1">Alt Text</label>
+                                <Input
+                                  value={section.alt || ""}
+                                  onChange={e => updateSection(section.id, { alt: e.target.value })}
+                                  placeholder="Image description"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-xs text-gray-500 block mb-1">Caption</label>
+                                <Input
+                                  value={section.caption || ""}
+                                  onChange={e => updateSection(section.id, { caption: e.target.value })}
+                                  placeholder="Optional caption"
+                                />
+                              </div>
+                            </div>
+                            {section.src && (
+                              <img src={section.src} alt={section.alt || ""} className="max-h-48 rounded border object-contain" />
+                            )}
+                            <div>
+                              <label className="text-xs text-gray-500 block mb-1">Text below image (optional)</label>
+                              <div className="border border-gray-200 rounded">
+                                <ReactQuill theme="snow" value={section.content || ""} onChange={content => updateSection(section.id, { content })} modules={modules} className="bg-white" />
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {section.type === "video" && (
+                          <div className="space-y-3">
+                            <div>
+                              <label className="text-xs text-gray-500 block mb-1">YouTube Embed URL *</label>
+                              <Input
+                                value={section.src || ""}
+                                onChange={e => updateSection(section.id, { src: e.target.value })}
+                                placeholder="https://www.youtube.com/embed/VIDEO_ID"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-xs text-gray-500 block mb-1">Caption</label>
+                              <Input
+                                value={section.caption || ""}
+                                onChange={e => updateSection(section.id, { caption: e.target.value })}
+                                placeholder="Optional caption"
+                              />
+                            </div>
+                            {section.src && (
+                              <div className="aspect-video rounded border overflow-hidden bg-black">
+                                <iframe src={section.src} className="w-full h-full" allowFullScreen />
+                              </div>
+                            )}
+                            <div>
+                              <label className="text-xs text-gray-500 block mb-1">Discussion questions / notes (optional)</label>
+                              <div className="border border-gray-200 rounded">
+                                <ReactQuill theme="snow" value={section.content || ""} onChange={content => updateSection(section.id, { content })} modules={modules} className="bg-white" />
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {section.type === "callout" && (
+                          <div className="space-y-3">
+                            <div>
+                              <label className="text-xs text-gray-500 block mb-1">Callout Style</label>
+                              <select
+                                value={section.style || "action"}
+                                onChange={e => updateSection(section.id, { style: e.target.value })}
+                                className="border border-gray-200 rounded px-2 py-1 text-xs"
+                              >
+                                <option value="action">Action (orange)</option>
+                                <option value="info">Info (blue)</option>
+                                <option value="warning">Warning (amber)</option>
+                                <option value="tip">Tip (green)</option>
+                              </select>
+                            </div>
+                            <div className="border border-gray-200 rounded">
+                              <ReactQuill theme="snow" value={section.content || ""} onChange={content => updateSection(section.id, { content })} modules={modules} className="bg-white" />
+                            </div>
                           </div>
                         )}
 

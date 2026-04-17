@@ -93,7 +93,7 @@ export default function Portal() {
             {isFacilitatorUser ? "The Facilitator Portal is only available to approved facilitators. Please wait for administrator approval." : "No approved enrollments yet. Please join a classroom first."}
           </p>
           <Link to="/Home">
-            <Button className="brand-gradient text-white rounded-full px-8">Back to Dashboard</Button>
+            <Button className="brand-gradient text-white rounded-full px-8">Back to Home</Button>
           </Link>
         </div>
       </div>
@@ -118,7 +118,7 @@ export default function Portal() {
             <Link to="/Home">
               <Button variant="outline" className="rounded-full gap-2 text-sm hidden sm:flex">
                 <Home className="w-4 h-4" />
-                Dashboard
+                Home
               </Button>
               <Button variant="outline" size="icon" className="rounded-full sm:hidden">
                 <Home className="w-4 h-4" />

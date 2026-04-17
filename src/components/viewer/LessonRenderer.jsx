@@ -3,7 +3,7 @@ import ReactMarkdown from "react-markdown";
 import MCQActivity from "./MCQActivity";
 import MicroValidationActivity from "./MicroValidationActivity";
 import { Button } from "@/components/ui/button";
-import { CheckCircle } from "lucide-react";
+import { CheckCircle, Rocket, Info, AlertTriangle, Lightbulb } from "lucide-react";
 
 export default function LessonRenderer({ section, onActivityComplete, lessonObjectives }) {
   // Render lesson objectives at the start (only once)
@@ -33,6 +33,75 @@ export default function LessonRenderer({ section, onActivityComplete, lessonObje
       <div className="mx-auto px-8 py-8 max-w-3xl">
         {section.title && <h2 className="text-2xl font-bold text-[#0B5394] mb-3">{section.title}</h2>}
         <div className="text-gray-700 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: section.content }} />
+      </div>
+    );
+  }
+
+  // Render image sections
+  if (section.type === "image") {
+    return (
+      <div className="mx-auto px-8 py-8 max-w-3xl">
+        {section.title && <h2 className="text-2xl font-bold text-[#0B5394] mb-3">{section.title}</h2>}
+        <div className="rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
+          <img
+            src={section.src}
+            alt={section.alt || section.title || ""}
+            className="w-full max-h-[500px] object-contain"
+          />
+        </div>
+        {section.caption && (
+          <p className="text-sm text-gray-500 text-center mt-2 italic">{section.caption}</p>
+        )}
+        {section.content && (
+          <div className="text-gray-700 prose prose-sm max-w-none mt-4" dangerouslySetInnerHTML={{ __html: section.content }} />
+        )}
+      </div>
+    );
+  }
+
+  // Render video sections
+  if (section.type === "video") {
+    return (
+      <div className="mx-auto px-8 py-8 max-w-3xl">
+        {section.title && <h2 className="text-2xl font-bold text-[#0B5394] mb-3">{section.title}</h2>}
+        <div className="rounded-xl overflow-hidden border border-gray-200 bg-black aspect-video">
+          <iframe
+            src={section.src}
+            title={section.title || "Video"}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            className="w-full h-full"
+          />
+        </div>
+        {section.caption && (
+          <p className="text-sm text-gray-500 text-center mt-2 italic">{section.caption}</p>
+        )}
+        {section.content && (
+          <div className="text-gray-700 prose prose-sm max-w-none mt-4" dangerouslySetInnerHTML={{ __html: section.content }} />
+        )}
+      </div>
+    );
+  }
+
+  // Render callout sections
+  if (section.type === "callout") {
+    const styles = {
+      action: { bg: "bg-gradient-to-r from-orange-50 to-amber-50", border: "border-orange-300", icon: <Rocket className="w-5 h-5 text-orange-500" />, titleColor: "text-orange-800" },
+      info: { bg: "bg-blue-50", border: "border-blue-300", icon: <Info className="w-5 h-5 text-blue-500" />, titleColor: "text-blue-800" },
+      warning: { bg: "bg-amber-50", border: "border-amber-300", icon: <AlertTriangle className="w-5 h-5 text-amber-500" />, titleColor: "text-amber-800" },
+      tip: { bg: "bg-emerald-50", border: "border-emerald-300", icon: <Lightbulb className="w-5 h-5 text-emerald-500" />, titleColor: "text-emerald-800" },
+    };
+    const style = styles[section.style] || styles.action;
+
+    return (
+      <div className="mx-auto px-8 py-8 max-w-3xl">
+        <div className={`${style.bg} border ${style.border} rounded-xl p-6`}>
+          <div className="flex items-center gap-2 mb-3">
+            {style.icon}
+            <h2 className={`text-lg font-bold ${style.titleColor}`}>{section.title || "Note"}</h2>
+          </div>
+          <div className="text-gray-700 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: section.content }} />
+        </div>
       </div>
     );
   }
