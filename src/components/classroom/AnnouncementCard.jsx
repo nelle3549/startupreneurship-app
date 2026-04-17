@@ -12,7 +12,7 @@ import { format } from "date-fns";
 import { Link } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 
-const EMOJI_OPTIONS = ["👍", "❤️", "🚀"];
+const EMOJI_OPTIONS = ["👍", "👎", "🚀"];
 
 function ReactionButton({ emoji, count, users, onReact, currentUserReacted }) {
   const [showUsers, setShowUsers] = useState(false);
@@ -251,30 +251,16 @@ export default function AnnouncementCard({
 
         {/* Reactions */}
         <div className="flex gap-2 mb-4 flex-wrap">
-          {reactionSummary.map(
-            (r) =>
-              r.count > 0 && (
-                <ReactionButton
-                  key={r.emoji}
-                  emoji={r.emoji}
-                  count={r.count}
-                  users={r.users}
-                  onReact={handleAddReaction}
-                  currentUserReacted={r.userReacted}
-                />
-              )
-          )}
-          <Button
-            size="sm"
-            variant="outline"
-            className="gap-1 text-xs h-7 px-2"
-            onClick={() => {
-              // Show emoji picker — for now, just react with first available
-              handleAddReaction(EMOJI_OPTIONS[0]);
-            }}
-          >
-            <span>➕</span>
-          </Button>
+          {reactionSummary.map((r) => (
+            <ReactionButton
+              key={r.emoji}
+              emoji={r.emoji}
+              count={r.count}
+              users={r.users}
+              onReact={handleAddReaction}
+              currentUserReacted={r.userReacted}
+            />
+          ))}
         </div>
 
         {/* Comment toggle */}
