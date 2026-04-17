@@ -578,16 +578,15 @@ export default function CourseEditorFullscreen({ yearLevel, onClose }) {
             <div className="p-8 max-w-4xl">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-bold text-gray-900">Course Details</h2>
-                <a
-                  href={`/Viewer?yearLevel=${yearLevel.key}&lesson=0&returnTo=CourseBuilder`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <Button variant="outline" size="sm" className="gap-1.5">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => window.open(`/Viewer?yearLevel=${yearLevel.key}&lesson=0&returnTo=CourseBuilder`, '_blank')}
+                  >
                     <Eye className="w-4 h-4" />
                     Preview
                   </Button>
-                </a>
               </div>
               
               <div className="space-y-6">
@@ -677,16 +676,15 @@ export default function CourseEditorFullscreen({ yearLevel, onClose }) {
                       </h2>
                     )}
                   </div>
-                  <a
-                    href={`/Viewer?yearLevel=${yearLevel.key}&lesson=${selectedLessonNum}&returnTo=CourseBuilder`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <Button variant="outline" size="sm" className="gap-1.5 flex-shrink-0 mt-5">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5 flex-shrink-0 mt-5"
+                      onClick={() => window.open(`/Viewer?yearLevel=${yearLevel.key}&lesson=${selectedLessonNum}&returnTo=CourseBuilder`, '_blank')}
+                    >
                       <Eye className="w-4 h-4" />
                       Preview
                     </Button>
-                  </a>
                 </div>
                 <div>
                   <p className="text-xs text-gray-400 mb-1">Summary</p>
