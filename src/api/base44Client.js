@@ -37,16 +37,11 @@ export const base44 = {
     },
 
     /**
-     * Redirect to Google OAuth login.
-     * Base44 called: base44.auth.redirectToLogin(returnPath)
+     * Navigate to login.
+     * No-op: login is now handled by the LoginSignup component inline.
      */
-    async redirectToLogin(returnPath) {
-      const redirectTo = `${window.location.origin}${returnPath || '/'}`;
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: { redirectTo },
-      });
-      if (error) throw error;
+    async redirectToLogin() {
+      // No-op: email/password login handled by LoginSignup component
     },
 
     /**

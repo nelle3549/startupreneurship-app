@@ -8,11 +8,7 @@ const UserNotRegisteredError = () => {
 
   const handleSignInDifferent = async () => {
     await supabase.auth.signOut();
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: window.location.origin },
-    });
-    if (error) console.error('Login redirect failed:', error);
+    window.location.href = '/';
   };
 
   return (

@@ -79,14 +79,9 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const navigateToLogin = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}${window.location.pathname}`,
-      },
-    });
-    if (error) console.error('Login redirect failed:', error);
+  const navigateToLogin = () => {
+    // No-op: login is handled by the LoginSignup component
+    // This exists for compatibility with components that call it
   };
 
   return (
