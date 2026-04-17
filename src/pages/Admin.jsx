@@ -70,9 +70,14 @@ export default function Admin() {
 
   const updateUserMutation = useMutation({
     mutationFn: async ({ id, data }) => {
-      // Update built-in User entity
-      await entities.User.update(id, data);
-      // Sync role/facilitator_status to UserAccount entity
+      // Only update role on public.users (it doesn't have facilitator_status)
+      const usersUpdate = {};
+      if (data.role !== undefined) usersUpdate.role = data.role;
+      if (Object.keys(usersUpdate).length > 0) {
+        await entities.User.update(id, usersUpdate);
+      }
+
+      // Update role + facilitator_status on user_accounts
       const user = allUsers.find(u => u.id === id);
       if (user?.email) {
         const accounts = await entities.UserAccount.filter({ email: user.email });
@@ -86,7 +91,10 @@ export default function Admin() {
         }
       }
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-users"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-user-accounts"] });
+    },
   });
 
 
@@ -187,45 +195,6 @@ export default function Admin() {
       </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
-        {/* Stats Row */}
-          <div className="grid grid-cols-3 gap-2 mb-6">
-            <Card>
-              <div className="flex items-start justify-between p-4">
-                <div>
-                  <p className="text-xs text-gray-500 font-medium">Guests</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{allUsers.filter(u => u.role === "guest" || !u.role).length}</p>
-                </div>
-                <div className="hidden sm:flex w-9 h-9 rounded-xl items-center justify-center text-gray-600 bg-gray-100">
-                  <Users className="w-4 h-4" />
-                </div>
-              </div>
-            </Card>
-            <Card>
-              <div className="flex items-start justify-between p-4">
-                <div>
-                  <p className="text-xs text-gray-500 font-medium">Students</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{allUsers.filter(u => u.role === "student").length}</p>
-                  <p className="text-xs text-amber-600 mt-1">pending: —</p>
-                </div>
-                <div className="hidden sm:flex w-9 h-9 rounded-xl items-center justify-center text-emerald-600 bg-emerald-100">
-                  <BookOpen className="w-4 h-4" />
-                </div>
-              </div>
-            </Card>
-            <Card>
-              <div className="flex items-start justify-between p-4">
-                <div>
-                  <p className="text-xs text-gray-500 font-medium">Facilitators</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{allUsers.filter(u => u.role === "facilitator").length}</p>
-                  <p className="text-xs text-amber-600 mt-1">pending: {pendingFacilitators.length}</p>
-                </div>
-                <div className="hidden sm:flex w-9 h-9 rounded-xl items-center justify-center text-purple-600 bg-purple-100">
-                  <Shield className="w-4 h-4" />
-                </div>
-              </div>
-            </Card>
-          </div>
-
         <Tabs value={tab} onValueChange={setTab}>
           <BrandTabsList tabs={[
             { value: "users", icon: <Users className="w-3.5 h-3.5" />, label: "Users", badge: pendingFacilitators.length },
@@ -236,6 +205,44 @@ export default function Admin() {
 
           {/* ── Users Tab (unified) ── */}
           <TabsContent value="users">
+            {/* Stats Row */}
+            <div className="grid grid-cols-3 gap-2 mb-4">
+              <Card>
+                <div className="flex items-start justify-between p-4">
+                  <div>
+                    <p className="text-xs text-gray-500 font-medium">Guests</p>
+                    <p className="text-2xl font-bold text-gray-900 mt-1">{allUsers.filter(u => u.role === "guest" || !u.role).length}</p>
+                  </div>
+                  <div className="hidden sm:flex w-9 h-9 rounded-xl items-center justify-center text-gray-600 bg-gray-100">
+                    <Users className="w-4 h-4" />
+                  </div>
+                </div>
+              </Card>
+              <Card>
+                <div className="flex items-start justify-between p-4">
+                  <div>
+                    <p className="text-xs text-gray-500 font-medium">Students</p>
+                    <p className="text-2xl font-bold text-gray-900 mt-1">{allUsers.filter(u => u.role === "student").length}</p>
+                  </div>
+                  <div className="hidden sm:flex w-9 h-9 rounded-xl items-center justify-center text-emerald-600 bg-emerald-100">
+                    <BookOpen className="w-4 h-4" />
+                  </div>
+                </div>
+              </Card>
+              <Card>
+                <div className="flex items-start justify-between p-4">
+                  <div>
+                    <p className="text-xs text-gray-500 font-medium">Facilitators</p>
+                    <p className="text-2xl font-bold text-gray-900 mt-1">{allUsers.filter(u => u.role === "facilitator").length}</p>
+                    <p className="text-xs text-amber-600 mt-1">pending: {pendingFacilitators.length}</p>
+                  </div>
+                  <div className="hidden sm:flex w-9 h-9 rounded-xl items-center justify-center text-purple-600 bg-purple-100">
+                    <Shield className="w-4 h-4" />
+                  </div>
+                </div>
+              </Card>
+            </div>
+
             {/* Pending Facilitator Applications */}
             {pendingFacilitators.length > 0 && (
               <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 mb-4">
