@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { getSavedUser } from "../userStorage";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
+import LoginSignup from "../registration/LoginSignup";
 
 const FALLBACK_WORDS = [
   { word: "PITCH", hint: "What entrepreneurs do to investors" },
@@ -213,25 +214,35 @@ function WordleGame({ onComplete, wordList }) {
 }
 
 function GuestStreakDialog({ onClose, emoji, title, subtitle }) {
+  const [showLogin, setShowLogin] = useState(false);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center px-4 pb-6 sm:pb-0">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full z-10">
-        <button onClick={onClose} className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 text-lg font-bold leading-none">✕</button>
-        <div className="text-center mb-4">
-          <div className="text-5xl mb-3">{emoji}</div>
-          <h3 className="text-base font-bold text-gray-900 mb-1">{title}</h3>
-          <p className="text-sm text-gray-500">{subtitle}</p>
+    <>
+      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center px-4 pb-6 sm:pb-0">
+        <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+        <div className="relative bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full z-10">
+          <button onClick={onClose} className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 text-lg font-bold leading-none">✕</button>
+          <div className="text-center mb-4">
+            <div className="text-5xl mb-3">{emoji}</div>
+            <h3 className="text-base font-bold text-gray-900 mb-1">{title}</h3>
+            <p className="text-sm text-gray-500">{subtitle}</p>
+          </div>
+          <Button
+            onClick={() => setShowLogin(true)}
+            className="w-full brand-gradient text-white rounded-full gap-2"
+          >
+            <UserPlus className="w-4 h-4" />
+            Create Account
+          </Button>
         </div>
-        <Button
-          onClick={() => window.location.href = "/Library"}
-          className="w-full brand-gradient text-white rounded-full gap-2"
-        >
-          <UserPlus className="w-4 h-4" />
-          Create Account
-        </Button>
       </div>
-    </div>
+      {showLogin && (
+        <LoginSignup
+          onComplete={() => window.location.reload()}
+          onCancel={() => setShowLogin(false)}
+        />
+      )}
+    </>
   );
 }
 
