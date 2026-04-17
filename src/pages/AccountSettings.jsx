@@ -150,8 +150,9 @@ export default function AccountSettings() {
     deleteAllProgress();
     clearSavedUser();
     localStorage.clear();
-    // TODO: implement server-side user data cleanup via Supabase Edge Function
-    supabase.auth.signOut().then(() => window.location.href = "/");
+    await supabase.functions.invoke('delete-user-and-data');
+    await supabase.auth.signOut();
+    window.location.href = "/";
   };
 
   return (

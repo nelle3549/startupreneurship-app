@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { entities } from "@/api/entities";
+import { supabase } from "@/api/supabaseClient";
 import { useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -74,8 +75,9 @@ export default function UserActionDialog({ open, onClose, user }) {
     const name = [user.first_name, user.last_name].filter(Boolean).join(" ") || user.email || "this user";
     if (!confirm(`Permanently delete account for ${name}? This cannot be undone.`)) return;
     setLoading(true);
-    // TODO: implement server-side user data cleanup via Supabase Edge Function
-    await entities.User.delete(user.id);
+    await supabase.functions.invoke('delete-user-and-data', {
+      body: { targetUserId: user.id },
+    });
     queryClient.invalidateQueries({ queryKey: ["admin-users"] });
     queryClient.invalidateQueries({ queryKey: ["admin-user-accounts"] });
     setLoading(false);

@@ -184,6 +184,7 @@ export default function Home() {
         <LoginSignup
           onComplete={() => window.location.reload()}
           onCancel={() => setShowLogin(false)}
+          defaultSignup={true}
         />
       )}
     </div>

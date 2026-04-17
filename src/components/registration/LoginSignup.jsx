@@ -5,8 +5,8 @@ import { AlertCircle, Mail, Eye, EyeOff, X } from "lucide-react";
 import { ICON_URL } from "../data/courseData";
 import { supabase } from "@/api/supabaseClient";
 
-export default function LoginSignup({ onComplete, onCancel }) {
-  const [isSignup, setIsSignup] = useState(false);
+export default function LoginSignup({ onComplete, onCancel, defaultSignup = false }) {
+  const [isSignup, setIsSignup] = useState(defaultSignup);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
