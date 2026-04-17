@@ -35,6 +35,127 @@ const modules = {
   },
 };
 
+function PreviewModal({ yearLevel, selectedLessonNum, lessons, details, sections, lessonObjectives, hasUnsavedChanges, onClose }) {
+  const [stepIdx, setStepIdx] = React.useState(0);
+
+  // Build steps from current in-memory data
+  const steps = React.useMemo(() => {
+    if (selectedLessonNum === null) {
+      return [{ id: "course_overview", label: "Course Overview", type: "course_overview" }];
+    }
+    const s = [];
+    if (lessonObjectives.length > 0) {
+      s.push({ id: "objectives", label: "Learning Objectives", type: "objectives" });
+    }
+    sections.forEach(sec => {
+      s.push({ id: sec.id, label: sec.title || "Section", type: "content", section: sec });
+    });
+    if (s.length === 0) {
+      s.push({ id: "empty", label: "No content", type: "empty" });
+    }
+    return s;
+  }, [selectedLessonNum, sections, lessonObjectives]);
+
+  const currentStep = steps[stepIdx];
+  const lessonTitle = selectedLessonNum === null
+    ? "Course Details"
+    : lessons.find(l => l.num === selectedLessonNum)?.title || `Lesson ${selectedLessonNum}`;
+
+  return (
+    <div className="fixed inset-0 z-[60] bg-white flex flex-col">
+      {/* Header */}
+      <header className="flex-shrink-0 border-b border-gray-100 px-4 py-3 flex items-center justify-between">
+        <div>
+          <p className="text-sm font-semibold text-gray-900 truncate max-w-[200px] sm:max-w-none">{currentStep?.label}</p>
+          <p className="text-xs text-gray-400">
+            {lessonTitle} — Section {stepIdx + 1} of {steps.length}
+            {hasUnsavedChanges && <span className="ml-2 text-amber-600 font-medium">● Unsaved</span>}
+          </p>
+        </div>
+        <Button variant="outline" size="sm" onClick={onClose} className="gap-1.5">
+          <X className="w-3 h-3" />
+          Close Preview
+        </Button>
+      </header>
+
+      {/* Progress bar */}
+      <div className="flex-shrink-0 w-full bg-gray-100 h-1">
+        <div className="brand-gradient h-1 transition-all duration-300" style={{ width: `${(stepIdx + 1) / steps.length * 100}%` }} />
+      </div>
+
+      {/* Content */}
+      <main className="flex-1 overflow-y-auto">
+        <div className="w-full min-h-full flex items-center justify-center">
+          {currentStep?.type === "course_overview" && (
+            <div className="mx-auto px-8 py-8 max-w-3xl w-full">
+              <h1 className="text-3xl font-bold text-[#0B5394] mb-2">{yearLevel.grade}</h1>
+              <p className="text-lg text-gray-600 mb-4">{details.subtitle}</p>
+              {details.quote && (
+                <blockquote className="border-l-4 border-blue-400 bg-blue-50 rounded-r-lg px-4 py-3 mb-4 text-gray-700">
+                  "{details.quote}" — {details.quoteAuthor}
+                </blockquote>
+              )}
+              <p className="text-gray-700 mb-6">{details.summary}</p>
+              {details.objectives?.length > 0 && (
+                <div className="p-5 bg-blue-50 rounded-xl border border-blue-200">
+                  <h2 className="text-xl font-bold text-[#0B5394] mb-3">Course Objectives</h2>
+                  <ul className="space-y-2">
+                    {details.objectives.map((obj, i) => (
+                      <li key={i} className="flex gap-3 text-gray-700 text-sm">
+                        <CheckCircle className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+                        <span>{obj}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+          {currentStep?.type === "objectives" && (
+            <LessonRenderer section={null} lessonObjectives={lessonObjectives} onActivityComplete={() => {}} />
+          )}
+          {currentStep?.type === "content" && (
+            <LessonRenderer section={currentStep.section} onActivityComplete={() => {}} />
+          )}
+          {currentStep?.type === "empty" && (
+            <div className="text-center text-gray-400 py-16">No sections to preview.</div>
+          )}
+        </div>
+      </main>
+
+      {/* Footer navigation */}
+      <footer className="flex-shrink-0 border-t border-gray-100 px-4 py-3 flex items-center justify-between bg-white">
+        <Button
+          variant="ghost"
+          onClick={() => setStepIdx(i => Math.max(0, i - 1))}
+          disabled={stepIdx === 0}
+          className="gap-1 text-sm"
+        >
+          <ChevronUp className="w-4 h-4 -rotate-90" />
+          Previous
+        </Button>
+        <div className="flex gap-1">
+          {steps.map((_, i) => (
+            <button
+              key={i}
+              onClick={() => setStepIdx(i)}
+              className={`w-2 h-2 rounded-full transition-colors ${i === stepIdx ? "bg-blue-600" : "bg-gray-300 hover:bg-gray-400"}`}
+            />
+          ))}
+        </div>
+        <Button
+          onClick={() => setStepIdx(i => Math.min(steps.length - 1, i + 1))}
+          disabled={stepIdx === steps.length - 1}
+          className="gap-1 text-sm brand-gradient text-white"
+        >
+          Next
+          <ChevronDown className="w-4 h-4 -rotate-90" />
+        </Button>
+      </footer>
+    </div>
+  );
+}
+
 export default function CourseEditorFullscreen({ yearLevel, onClose }) {
   const queryClient = useQueryClient();
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
@@ -926,66 +1047,17 @@ export default function CourseEditorFullscreen({ yearLevel, onClose }) {
         </div>
       </div>
 
-      {/* Live Preview Modal */}
-      {showPreview && (
-        <div className="fixed inset-0 z-[60] bg-white flex flex-col">
-          <header className="flex-shrink-0 border-b border-gray-200 px-4 py-3 flex items-center justify-between bg-gray-50">
-            <div className="flex items-center gap-3">
-              <Eye className="w-4 h-4 text-gray-500" />
-              <h3 className="text-sm font-bold text-gray-900">
-                Preview: {selectedLessonNum === null
-                  ? "Course Details"
-                  : lessons.find(l => l.num === selectedLessonNum)?.title || `Lesson ${selectedLessonNum}`}
-              </h3>
-              {hasUnsavedChanges && (
-                <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">Unsaved changes</span>
-              )}
-            </div>
-            <Button variant="outline" size="sm" onClick={() => setShowPreview(false)}>
-              Close Preview
-            </Button>
-          </header>
-          <div className="flex-1 overflow-y-auto bg-white">
-            {selectedLessonNum === null ? (
-              <div className="mx-auto px-8 py-8 max-w-3xl">
-                <h1 className="text-3xl font-bold text-[#0B5394] mb-2">{yearLevel.grade}</h1>
-                <p className="text-lg text-gray-600 mb-4">{details.subtitle}</p>
-                {details.quote && (
-                  <blockquote className="border-l-4 border-blue-400 bg-blue-50 rounded-r-lg px-4 py-3 mb-4 italic text-gray-700">
-                    "{details.quote}" — {details.quoteAuthor}
-                  </blockquote>
-                )}
-                <p className="text-gray-700 mb-6">{details.summary}</p>
-                {details.objectives?.length > 0 && (
-                  <div className="p-5 bg-blue-50 rounded-xl border border-blue-200">
-                    <h2 className="text-xl font-bold text-[#0B5394] mb-3">Course Objectives</h2>
-                    <ul className="space-y-2">
-                      {details.objectives.map((obj, i) => (
-                        <li key={i} className="flex gap-3 text-gray-700 text-sm">
-                          <CheckCircle className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
-                          <span>{obj}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div>
-                {lessonObjectives.length > 0 && (
-                  <LessonRenderer section={null} lessonObjectives={lessonObjectives} onActivityComplete={() => {}} />
-                )}
-                {sections.map(section => (
-                  <LessonRenderer key={section.id} section={section} onActivityComplete={() => {}} />
-                ))}
-                {sections.length === 0 && (
-                  <div className="text-center text-gray-400 py-16">No sections to preview.</div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      {/* Live Preview Modal — step-by-step like the real viewer */}
+      {showPreview && <PreviewModal
+        yearLevel={yearLevel}
+        selectedLessonNum={selectedLessonNum}
+        lessons={lessons}
+        details={details}
+        sections={sections}
+        lessonObjectives={lessonObjectives}
+        hasUnsavedChanges={hasUnsavedChanges}
+        onClose={() => setShowPreview(false)}
+      />}
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!confirmDelete} onOpenChange={(open) => !open && setConfirmDelete(null)}>
