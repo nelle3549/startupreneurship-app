@@ -17,7 +17,7 @@ import LessonManagementTab from "../components/portal/LessonManagementTab";
 import ProgressTrackingTab from "../components/portal/ProgressTrackingTab";
 
 export default function Portal() {
-  const { user: authUser, userAccount, isLoading: authLoading, isFacilitator, isAdmin } = useCurrentUser();
+  const { user: authUser, isLoading: authLoading, isFacilitator, isAdmin } = useCurrentUser();
   const legacyUser = getSavedUser();
   const isLegacyFacilitator = legacyUser?.role === "facilitator" && legacyUser?.status === "verified";
   const isFacilitatorUser = isFacilitator || isAdmin || isLegacyFacilitator;
@@ -38,7 +38,7 @@ export default function Portal() {
   const [selectedClassroom, setSelectedClassroom] = useState(null);
 
   // Pending enrollment count for badge
-  const facilitatorId = userAccount?.user_id || authUser?.id;
+  const facilitatorId = authUser?.id;
   const { data: classrooms = [] } = useQuery({
     queryKey: ["classrooms", facilitatorId],
     queryFn: () => entities.Classroom.filter({ facilitator_id: facilitatorId }),

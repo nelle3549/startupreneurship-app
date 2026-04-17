@@ -42,7 +42,7 @@ export default function ClassroomView() {
 
   // Check access: admin, facilitator owner, or enrolled student
   const isOwner = classroom && user && classroom.facilitator_id === user.id;
-  const isEnrolled = enrollments.some(e => e.student_id === user?.id && e.status === "approved");
+  const isEnrolled = enrollments.some(e => (e.student_id === user?.id || e.student_email === user?.email) && e.status === "approved");
   const hasAccess = isAdmin || isOwner || isEnrolled;
 
   if (userLoading || classroomLoading) {

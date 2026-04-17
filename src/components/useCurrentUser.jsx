@@ -54,8 +54,12 @@ export function useCurrentUser() {
   });
 
   // Merge authUser + userAccount — UserAccount is source of truth for app-specific fields
+  // Use public.users.id as the canonical user.id (not auth.users.id)
+  // so that facilitator_id, student_id comparisons work throughout the app
   const user = authUser ? {
     ...authUser,
+    id: userAccount?.user_id || authUser?.id,
+    auth_id: authUser?.id,
     first_name: userAccount?.first_name || authUser?.first_name,
     last_name: userAccount?.last_name || authUser?.last_name,
     full_name: [userAccount?.first_name, userAccount?.last_name].filter(Boolean).join(" ") || authUser?.full_name || "",
