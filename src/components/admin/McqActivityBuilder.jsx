@@ -1,22 +1,18 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2, ChevronUp, ChevronDown, CheckCircle, AlertCircle } from "lucide-react";
+import { Trash2, ChevronUp, ChevronDown, CheckCircle, AlertCircle } from "lucide-react";
 
 export default function McqActivityBuilder({ activity, updateSection }) {
-  const [question, setQuestion] = useState(activity.question || "");
-  const [options, setOptions] = useState(activity.options || ["", "", "", ""]);
-  const [correctAnswerIndex, setCorrectAnswerIndex] = useState(activity.correct_answer_index !== undefined ? activity.correct_answer_index : 0);
+  const question = activity.question || "";
+  const options = activity.options || ["", "", "", ""];
+  const correctAnswerIndex = activity.correct_answer_index ?? 0;
 
-  useEffect(() => {
-    updateSection(activity.id, {
-      question,
-      options,
-      correct_answer_index: correctAnswerIndex,
-    });
-  }, [question, options, correctAnswerIndex, activity.id, updateSection]);
+  const setQuestion = (q) => updateSection(activity.id, { question: q });
+  const setOptions = (o) => updateSection(activity.id, { options: o });
+  const setCorrectAnswerIndex = (i) => updateSection(activity.id, { correct_answer_index: i });
 
   const updateOption = (index, value) => {
     const newOptions = [...options];

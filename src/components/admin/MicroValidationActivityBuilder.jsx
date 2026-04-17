@@ -1,33 +1,27 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2, ChevronUp, ChevronDown, CheckCircle, AlertCircle } from "lucide-react";
+import { Trash2, ChevronUp, ChevronDown, CheckCircle, AlertCircle } from "lucide-react";
 
 export default function MicroValidationActivityBuilder({ activity, updateSection }) {
-  const [question, setQuestion] = useState(activity.question || "");
-  const [options, setOptions] = useState(activity.options || ["", "", ""]);
-  const [correctAnswerIndex, setCorrectAnswerIndex] = useState(activity.correct_answer_index !== undefined ? activity.correct_answer_index : 0);
-  const [correctAnswerExplanation, setCorrectAnswerExplanation] = useState(activity.correct_answer_explanation || "");
+  const question = activity.question || "";
+  const options = activity.options || ["", "", ""];
+  const correctAnswerIndex = activity.correct_answer_index ?? 0;
+  const correctAnswerExplanation = activity.correct_answer_explanation || "";
 
-  useEffect(() => {
-    updateSection(activity.id, {
-      question,
-      options,
-      correct_answer_index: correctAnswerIndex,
-      correct_answer_explanation: correctAnswerExplanation,
-    });
-  }, [question, options, correctAnswerIndex, correctAnswerExplanation, activity.id, updateSection]);
+  const setQuestion = (q) => updateSection(activity.id, { question: q });
+  const setOptions = (o) => updateSection(activity.id, { options: o });
+  const setCorrectAnswerIndex = (i) => updateSection(activity.id, { correct_answer_index: i });
+  const setCorrectAnswerExplanation = (e) => updateSection(activity.id, { correct_answer_explanation: e });
 
   const updateOption = (index, value) => {
     const newOptions = [...options];
     newOptions[index] = value;
     setOptions(newOptions);
   };
-
-
 
   const removeOption = (index) => {
     if (options.length > 2) {

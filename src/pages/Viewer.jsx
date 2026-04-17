@@ -45,10 +45,12 @@ function getSteps(yearLevelKey, lessonNumber, dbLessonContent, courseDetails) {
   // Add sections from database if available
   if (dbLessonContent?.sections && dbLessonContent.sections.length > 0) {
     dbLessonContent.sections.forEach((section) => {
+      const isActivity = section.type === "activity";
       baseSteps.push({
         id: section.id,
-        label: section.title || "Section",
-        type: "content"
+        label: section.title || (isActivity ? "Activity" : "Section"),
+        type: isActivity ? "activity" : "content",
+        activity_type: isActivity ? section.activity_type : undefined,
       });
     });
   }
@@ -648,8 +650,8 @@ export default function Viewer() {
         return null;
 
       default:
-        // Handle content type steps (sections from database)
-        if (currentStep?.type === "content") {
+        // Handle content and activity steps (sections from database)
+        if (currentStep?.type === "content" || currentStep?.type === "activity") {
           const dbSection = dbLessonContent?.sections?.find(s => s.id === currentStep?.id);
           if (dbSection) {
             return (

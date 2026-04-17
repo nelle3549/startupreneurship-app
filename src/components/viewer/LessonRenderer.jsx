@@ -109,10 +109,17 @@ export default function LessonRenderer({ section, onActivityComplete, lessonObje
   // Render activity sections
   if (section.type === "activity") {
     if (section.activity_type === "mcq_graded" || section.activity_type === "mcq") {
+      // MCQActivity expects { q, options, answer } — normalize both legacy `items`
+      // and the builder shape `{ question, options, correct_answer_index }`.
+      const toViewerQuestion = (src) => ({
+        q: src.q ?? src.question ?? "",
+        options: src.options || [],
+        answer: src.answer ?? src.correct_answer_index ?? 0,
+      });
       const questions = section.items?.length > 0
-        ? section.items
+        ? section.items.map(toViewerQuestion)
         : section.question
-          ? [{ question: section.question, options: section.options || [], correct_answer_index: section.correct_answer_index || 0 }]
+          ? [toViewerQuestion(section)]
           : [];
       return (
         <div className="max-w-2xl mx-auto py-8 px-4">
@@ -153,11 +160,31 @@ export default function LessonRenderer({ section, onActivityComplete, lessonObje
     }
 
     if (section.activity_type === "micro_validation") {
-      const item = section.items?.[0] || {
-        question: section.question,
-        options: section.options,
-        explanations: section.explanations,
-        correct_answer_index: section.correct_answer_index
+      // Normalize to MicroValidationActivity's expected shape:
+      //   { q, options: [{ text, explanation }], correct_answer }
+      const raw = section.items?.[0] || section;
+      const correctIdx = raw.correct_answer ?? raw.correct_answer_index ?? 0;
+      const sharedExplanation = raw.correct_answer_explanation || "";
+      const perOptionExplanations = raw.explanations || [];
+      const normalizedOptions = (raw.options || []).map((opt, idx) => {
+        if (opt && typeof opt === "object") {
+          return { text: opt.text ?? "", explanation: opt.explanation ?? "" };
+        }
+        return {
+          text: opt ?? "",
+          explanation:
+            perOptionExplanations[idx] ??
+            (idx === correctIdx
+              ? sharedExplanation
+              : sharedExplanation
+                ? `The correct answer is "${raw.options?.[correctIdx] ?? ""}". ${sharedExplanation}`
+                : ""),
+        };
+      });
+      const item = {
+        q: raw.q ?? raw.question ?? "",
+        options: normalizedOptions,
+        correct_answer: correctIdx,
       };
       return (
         <div className="max-w-2xl mx-auto py-8 px-4">
@@ -165,7 +192,7 @@ export default function LessonRenderer({ section, onActivityComplete, lessonObje
             <p className="text-xs font-semibold text-cyan-700">Check Your Understanding</p>
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-6">{section.title}</h2>
-          {item.question ? (
+          {item.q ? (
             <MicroValidationActivity
               item={item}
               onComplete={() => onActivityComplete(section.id)}

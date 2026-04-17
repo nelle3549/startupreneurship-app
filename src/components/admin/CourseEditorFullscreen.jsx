@@ -39,6 +39,7 @@ export default function CourseEditorFullscreen({ yearLevel, onClose }) {
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(null); // { kind: "section"|"lesson", id/idx, label }
 
   // Fetch Course Details from DB
   const { data: dbCourseDetails = null } = useQuery({
@@ -119,25 +120,8 @@ export default function CourseEditorFullscreen({ yearLevel, onClose }) {
       setSections(dbLessonContent.sections);
       setInitialSections(JSON.parse(JSON.stringify(dbLessonContent.sections)));
     } else if (selectedLessonNum) {
-      const defaultSections = [
-        {
-          id: `section-${Date.now()}`,
-          type: "text",
-          title: "New Section",
-          content: ""
-        },
-        {
-          id: `activity-${Date.now() + 1}`,
-          type: "activity",
-          activity_type: "mcq",
-          title: "New MCQ Activity",
-          question: "",
-          options: ["", "", "", ""],
-          correct_answer_index: 0
-        }
-      ];
-      setSections(defaultSections);
-      setInitialSections(JSON.parse(JSON.stringify(defaultSections)));
+      setSections([]);
+      setInitialSections([]);
     }
     if (dbLessonContent?.lesson_objectives) {
       setLessonObjectives(dbLessonContent.lesson_objectives);
@@ -433,11 +417,12 @@ export default function CourseEditorFullscreen({ yearLevel, onClose }) {
   };
 
   // Lesson management
-  const addLesson = () => {
+  const addLesson = (type = "lesson") => {
     const newLessonNum = Math.max(...lessons.map(l => l.num), 0) + 1;
+    const label = type === "milestone" ? "New Milestone" : "New Lesson";
     setLessons(prev => [
       ...prev,
-      { num: newLessonNum, title: "New Lesson", summary: "Lesson content coming soon." }
+      { num: newLessonNum, title: label, summary: `${label} content coming soon.`, type }
     ]);
   };
 
@@ -513,10 +498,16 @@ export default function CourseEditorFullscreen({ yearLevel, onClose }) {
             <div>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-bold text-gray-900">Lessons</h2>
-                <Button onClick={addLesson} size="sm" className="bg-blue-600 text-white gap-1">
-                  <Plus className="w-3 h-3" />
-                  Add
-                </Button>
+                <div className="flex gap-1">
+                  <Button onClick={() => addLesson("lesson")} size="sm" className="bg-blue-600 text-white gap-1">
+                    <Plus className="w-3 h-3" />
+                    Lesson
+                  </Button>
+                  <Button onClick={() => addLesson("milestone")} size="sm" className="bg-amber-600 text-white gap-1">
+                    <Plus className="w-3 h-3" />
+                    Milestone
+                  </Button>
+                </div>
               </div>
               <div className="space-y-2">
                 <div
@@ -540,7 +531,13 @@ export default function CourseEditorFullscreen({ yearLevel, onClose }) {
                     }`}
                   >
                     <div className="flex items-start justify-between gap-2 mb-1">
-                      <p className="text-sm font-semibold text-gray-900">Lesson {lesson.num}</p>
+                      <p className="text-sm font-semibold text-gray-900">
+                        {lesson.type === "milestone" ? (
+                          <span className="text-amber-700">Milestone {lesson.milestoneNum || lessons.filter((l, li) => l.type === "milestone" && li <= idx).length}</span>
+                        ) : (
+                          <>Lesson {lessons.filter((l, li) => l.type !== "milestone" && li < idx).length + 1}</>
+                        )}
+                      </p>
                       <div className="flex gap-1 flex-shrink-0">
                         <button
                           onClick={e => { e.stopPropagation(); moveLesson(idx, "up"); }}
@@ -557,7 +554,10 @@ export default function CourseEditorFullscreen({ yearLevel, onClose }) {
                           <ChevronDown className="w-3 h-3" />
                         </button>
                         <button
-                          onClick={e => { e.stopPropagation(); removeLesson(idx); }}
+                          onClick={e => {
+                            e.stopPropagation();
+                            setConfirmDelete({ kind: "lesson", idx, label: `Lesson ${lesson.num}: ${lesson.title || ""}` });
+                          }}
                           className="text-gray-400 hover:text-red-600"
                         >
                           <Trash2 className="w-3 h-3" />
@@ -656,7 +656,15 @@ export default function CourseEditorFullscreen({ yearLevel, onClose }) {
               <div className="mb-8">
                 <div className="flex items-start justify-between gap-4 mb-2">
                   <div className="flex-1">
-                    <p className="text-xs text-gray-400 mb-1">Lesson {selectedLessonNum} — Title</p>
+                    <p className="text-xs text-gray-400 mb-1">{(() => {
+                      const lesson = lessons.find(l => l.num === selectedLessonNum);
+                      if (lesson?.type === "milestone") {
+                        const mIdx = lessons.filter(l => l.type === "milestone" && l.num <= selectedLessonNum).length;
+                        return `Milestone ${lesson.milestoneNum || mIdx}`;
+                      }
+                      const lIdx = lessons.filter(l => l.type !== "milestone" && l.num <= selectedLessonNum).length;
+                      return `Lesson ${lIdx}`;
+                    })()} — Title</p>
                     {editingLessonField?.num === selectedLessonNum && editingLessonField?.field === "title" ? (
                       <Input
                         autoFocus
@@ -768,6 +776,24 @@ export default function CourseEditorFullscreen({ yearLevel, onClose }) {
                   </div>
                 </div>
 
+                {sections.length === 0 && (
+                  <div className="border-2 border-dashed border-gray-200 rounded-lg p-10 text-center bg-gray-50">
+                    <p className="text-sm text-gray-600 font-medium mb-1">No sections yet</p>
+                    <p className="text-xs text-gray-500 mb-4">Add a section above to start building this lesson.</p>
+                    <div className="flex justify-center gap-2 flex-wrap">
+                      <Button onClick={addSection} size="sm" variant="outline" className="gap-1">
+                        <Plus className="w-3 h-3" /> Text
+                      </Button>
+                      <Button onClick={() => addTypedSection("image")} size="sm" variant="outline" className="gap-1">
+                        <Plus className="w-3 h-3" /> Image
+                      </Button>
+                      <Button onClick={() => addTypedSection("video")} size="sm" variant="outline" className="gap-1">
+                        <Plus className="w-3 h-3" /> Video
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
                 <div className="space-y-3">
                   {sections.map((section, idx) => (
                     <Card key={section.id} className="border-gray-200">
@@ -820,7 +846,12 @@ export default function CourseEditorFullscreen({ yearLevel, onClose }) {
                           >
                             <ChevronDown className="w-3 h-3" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => removeSection(section.id)} className="h-8 w-8 text-red-400">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setConfirmDelete({ kind: "section", id: section.id, label: section.title || "this section" })}
+                            className="h-8 w-8 text-red-400"
+                          >
                             <Trash2 className="w-3 h-3" />
                           </Button>
                         </div>
@@ -989,6 +1020,36 @@ export default function CourseEditorFullscreen({ yearLevel, onClose }) {
           </Button>
         </div>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!confirmDelete} onOpenChange={(open) => !open && setConfirmDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogTitle>
+            Delete {confirmDelete?.kind === "lesson" ? "lesson" : "section"}?
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            {confirmDelete?.kind === "lesson"
+              ? `This will remove "${confirmDelete?.label}" and all its content from the course. This cannot be undone.`
+              : `This will remove "${confirmDelete?.label}" from this lesson. This cannot be undone.`}
+          </AlertDialogDescription>
+          <div className="flex gap-3 justify-end">
+            <AlertDialogCancel onClick={() => setConfirmDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700 text-white"
+              onClick={() => {
+                if (confirmDelete?.kind === "lesson") {
+                  removeLesson(confirmDelete.idx);
+                } else if (confirmDelete?.kind === "section") {
+                  removeSection(confirmDelete.id);
+                }
+                setConfirmDelete(null);
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Unsaved Changes Dialog */}
       <AlertDialog open={showUnsavedDialog} onOpenChange={setShowUnsavedDialog}>
