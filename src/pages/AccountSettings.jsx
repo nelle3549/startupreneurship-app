@@ -147,10 +147,12 @@ export default function AccountSettings() {
 
   const handleDeleteAccount = async () => {
     if (!authUser?.id) return;
+    // Call Edge Function FIRST while session is still valid
+    await supabase.functions.invoke('delete-user-and-data');
+    // Then clean up local data and sign out
     deleteAllProgress();
     clearSavedUser();
     localStorage.clear();
-    await supabase.functions.invoke('delete-user-and-data');
     await supabase.auth.signOut();
     window.location.href = "/";
   };
