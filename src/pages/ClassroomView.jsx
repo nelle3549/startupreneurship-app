@@ -106,7 +106,7 @@ export default function ClassroomView() {
             <Link to={isAdmin ? "/Admin" : isFacilitator ? "/Portal" : "/Home"}>
               <Button variant="ghost" size="icon" className="w-auto px-2 gap-1">
                 <Home className="w-4 h-4" />
-                <span className="hidden sm:inline text-sm">Dashboard</span>
+                <span className="hidden sm:inline text-sm">{isAdmin || isFacilitator ? "Dashboard" : "Home"}</span>
               </Button>
             </Link>
             {(isFacilitator || isAdmin) && (
@@ -122,7 +122,7 @@ export default function ClassroomView() {
       {/* Classroom Header */}
       <ClassroomHeader classroom={classroom} />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-5">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <BrandTabsList tabs={[
             { value: "announcements", icon: <Bell className="w-3.5 h-3.5" />, label: "Announcements" },

@@ -3,7 +3,7 @@ import { entities } from "@/api/entities";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { ArrowLeft, ArrowRight, CheckCircle, Info, Lock, BookOpen, Shield } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle, Info, Lock, BookOpen, Shield, AlertTriangle } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useCurrentUser } from "../components/useCurrentUser";
 import { ICON_URL } from "../components/data/courseData";
@@ -68,6 +68,7 @@ export default function Viewer() {
   const isReplay = params.get("replay") === "true";
   const returnTo = params.get("returnTo"); // e.g. "CourseBuilder"
   const returnTab = params.get("returnTab"); // e.g. "lessons"
+  const activityShortcut = params.get("activity"); // e.g. "mcq" — jump directly to activity step
   const navigate = useNavigate();
   const { user, isAdmin, isFacilitator } = useCurrentUser();
   const isStudent = !isAdmin && !isFacilitator;
@@ -79,8 +80,13 @@ export default function Viewer() {
   const [activityDone, setActivityDone] = useState({});
   const [mcqScore, setMcqScore] = useState(null);
   const [reachedBottom, setReachedBottom] = useState(false);
-  const mainScrollRef = React.useRef(null);
+  const [mainEl, setMainEl] = useState(null);
   const [selectedSlide, setSelectedSlide] = useState(null);
+  // MCQ "in-progress" coordination: the quiz activity writes to mcqSubmitRef so we can
+  // force partial submission when the student confirms leaving.
+  const [mcqInProgress, setMcqInProgress] = useState(false);
+  const mcqSubmitRef = React.useRef(null);
+  const [leaveConfirm, setLeaveConfirm] = useState(null); // { onContinue } or null
   const [inRetakeMode, setInRetakeMode] = useState(false);
 
   const { data: slides = [] } = useQuery({
@@ -149,31 +155,73 @@ export default function Viewer() {
 
 
 
+  // Auto-mark activities as "done" if the student has a recorded score and is not mid-retake
   useEffect(() => {
+    const scores = currentStudentProgress?.activity_scores;
+    if (!scores || currentStudentProgress?.status === "retake_in_progress") return;
+    const doneFromHistory = {};
+    steps.forEach(s => {
+      if (s.type !== "activity") return;
+      const key = s.activity_type === "mcq" || s.activity_type === "mcq_graded" ? "mcq" : s.id;
+      if (scores[key] !== undefined) doneFromHistory[s.id] = true;
+    });
+    if (Object.keys(doneFromHistory).length > 0) {
+      setActivityDone(prev => ({ ...doneFromHistory, ...prev }));
+    }
+  }, [currentStudentProgress, steps]);
+
+  useEffect(() => {
+    if (activityShortcut && steps.length > 0) {
+      const target = steps.findIndex(s =>
+        s.id === activityShortcut ||
+        s.activity_type === activityShortcut ||
+        (activityShortcut === "mcq" && (s.activity_type === "mcq" || s.activity_type === "mcq_graded"))
+      );
+      if (target >= 0) {
+        setStepIdx(target);
+        return;
+      }
+    }
+    // Resume where the student left off: if there's a saved in-progress step, jump to it.
+    // Completed lessons start from step 0 so the student can re-read from the beginning.
+    const saved = currentStudentProgress?.current_step_index;
+    const completed = currentStudentProgress?.completed;
+    if (!completed && typeof saved === "number" && saved > 0 && saved < steps.length) {
+      setStepIdx(saved);
+      return;
+    }
     setStepIdx(0);
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [steps.length, activityShortcut, currentStudentProgress?.id, currentStudentProgress?.current_step_index, currentStudentProgress?.completed]);
 
   // Reset reachedBottom whenever the step changes
   useEffect(() => {
     setReachedBottom(false);
-    if (mainScrollRef.current) {
-      mainScrollRef.current.scrollTo({ top: 0 });
+    if (mainEl) {
+      mainEl.scrollTo({ top: 0 });
     }
-  }, [stepIdx]);
+  }, [stepIdx, mainEl]);
 
   // Track scroll position to detect bottom
   useEffect(() => {
-    const el = mainScrollRef.current;
+    const el = mainEl;
     if (!el) return;
-    const handleScroll = () => {
+    const check = () => {
       const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 8;
       if (atBottom) setReachedBottom(true);
     };
-    el.addEventListener("scroll", handleScroll);
-    // Check immediately in case content is shorter than viewport
-    handleScroll();
-    return () => el.removeEventListener("scroll", handleScroll);
-  }, [stepIdx]);
+    el.addEventListener("scroll", check);
+    // Re-check when the content or container size changes, covering cases
+    // where content fits the viewport and no scroll event ever fires.
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    if (el.firstElementChild) ro.observe(el.firstElementChild);
+    check();
+    return () => {
+      el.removeEventListener("scroll", check);
+      ro.disconnect();
+    };
+  }, [stepIdx, mainEl]);
 
   const currentStep = steps[stepIdx];
   const isActivity = currentStep?.type === "activity";
@@ -181,8 +229,8 @@ export default function Viewer() {
   const canGoNext = activityReady && reachedBottom;
 
   const scrollPageDown = () => {
-    if (mainScrollRef.current) {
-      mainScrollRef.current.scrollBy({ top: mainScrollRef.current.clientHeight * 0.8, behavior: "smooth" });
+    if (mainEl) {
+      mainEl.scrollBy({ top: mainEl.clientHeight * 0.8, behavior: "smooth" });
     }
   };
 
@@ -238,8 +286,25 @@ export default function Viewer() {
     }
   };
 
+  const guardLeave = (action) => {
+    if (mcqInProgress) {
+      setLeaveConfirm({ onContinue: () => { setLeaveConfirm(null); action(); } });
+    } else {
+      action();
+    }
+  };
+
+  const handleLeaveConfirmed = () => {
+    // Submit partial — unanswered items are marked wrong — then continue with the action.
+    const submit = mcqSubmitRef.current;
+    const action = leaveConfirm?.onContinue;
+    if (submit) submit();
+    setLeaveConfirm(null);
+    if (action) action();
+  };
+
   const goPrev = () => {
-    if (stepIdx > 0) setStepIdx(stepIdx - 1);
+    if (stepIdx > 0) guardLeave(() => setStepIdx(stepIdx - 1));
   };
 
   const handleMarkComplete = async () => {
@@ -314,9 +379,14 @@ export default function Viewer() {
     }
   };
 
-  const handleActivityComplete = (id, score) => {
+  const handleActivityComplete = (id, score, kind) => {
     setActivityDone((prev) => ({ ...prev, [id]: true }));
-    if (id === "mcq" && score !== undefined) {
+    const isMcq = kind === "mcq" || id === "mcq";
+    // Normalize the activity_id used inside all_scores / activity_scores so the past-result
+    // view and shortcuts keep working regardless of whether the step id is the legacy "mcq"
+    // or a DB section id like "activity-grade-6-l3-mcq".
+    const activityKey = isMcq ? "mcq" : id;
+    if (isMcq && score !== undefined) {
       setMcqScore(score);
     }
     // Save in-progress state to StudentLessonProgress (students only)
@@ -328,19 +398,19 @@ export default function Viewer() {
         lesson_number: lessonNumber,
       }).then((existing) => {
         const timestamp = new Date().toISOString();
-        const attemptNumber = existing.length > 0 
-          ? (existing[0].all_scores?.filter(a => a.activity_id === id).length || 0) + 1
+        const attemptNumber = existing.length > 0
+          ? (existing[0].all_scores?.filter(a => a.activity_id === activityKey).length || 0) + 1
           : 1;
-        
+
         const newScoreEntry = {
-          activity_id: id,
+          activity_id: activityKey,
           score: score,
           timestamp,
           attempt_number: attemptNumber,
           retake_status: inRetakeMode ? "retake_completed" : "completed",
         };
 
-        const activityScores = id === "mcq" && score !== undefined ? { mcq: score } : {};
+        const activityScores = isMcq && score !== undefined ? { mcq: score } : {};
         const prevRecord = existing.length > 0 ? existing[0] : null;
         const prevHighest = prevRecord?.highest_score ?? prevRecord?.overall_score ?? 0;
         const newHighest = Math.max(prevHighest, score ?? 0);
@@ -348,6 +418,9 @@ export default function Viewer() {
         const prevAllScores = prevRecord?.all_scores || [];
         const newAllScores = [...prevAllScores, newScoreEntry];
 
+        // When the MCQ is submitted, mark the lesson as completed so revisits
+        // land on the past-result / retake view instead of restarting the quiz.
+        const nowCompleted = isMcq && !inRetakeMode;
         const data = {
           current_step_index: stepIdx,
           total_steps: steps.length,
@@ -356,7 +429,9 @@ export default function Viewer() {
           highest_score: newHighest,
           highest_score_date: newHighestDate,
           all_scores: newAllScores,
-          status: inRetakeMode ? "retake_in_progress" : "in_progress",
+          ...(nowCompleted
+            ? { completed: true, status: "completed", completion_date: timestamp }
+            : { status: inRetakeMode ? "retake_in_progress" : "in_progress" }),
         };
         
         if (existing.length > 0) {
@@ -660,6 +735,10 @@ export default function Viewer() {
                 section={dbSection}
                 onActivityComplete={handleActivityComplete}
                 lessonObjectives={dbLessonContent?.lesson_objectives}
+                studentProgress={currentStudentProgress}
+                lessonAccess={lessonAccess.find(la => la.lesson_number === lessonNumber)}
+                mcqSubmitRef={mcqSubmitRef}
+                onMcqInProgressChange={setMcqInProgress}
               />
             );
           }
@@ -691,6 +770,7 @@ export default function Viewer() {
           {returnTo === "CourseBuilder" ? (
             <a
               href={`/CourseBuilder?yearLevel=${yearLevelKey}`}
+              onClick={(e) => { if (mcqInProgress) { e.preventDefault(); guardLeave(() => { window.location.href = `/CourseBuilder?yearLevel=${yearLevelKey}`; }); } }}
               className="flex items-center gap-1.5 text-sm px-3 py-1.5 hover:bg-gray-100 rounded-lg text-gray-500 hover:text-gray-700"
             >
               <ArrowLeft className="w-4 h-4" />
@@ -699,6 +779,7 @@ export default function Viewer() {
           ) : classroomId ? (
             <a
               href={`/ClassroomView?id=${classroomId}${returnTab ? `&tab=${returnTab}` : ''}`}
+              onClick={(e) => { if (mcqInProgress) { e.preventDefault(); const url = `/ClassroomView?id=${classroomId}${returnTab ? `&tab=${returnTab}` : ''}`; guardLeave(() => { window.location.href = url; }); } }}
               className="flex items-center gap-1.5 text-sm px-3 py-1.5 hover:bg-gray-100 rounded-lg text-gray-500 hover:text-gray-700"
             >
               <BookOpen className="w-4 h-4" />
@@ -712,7 +793,7 @@ export default function Viewer() {
           <div className="brand-gradient h-1 transition-all duration-300" style={{ width: `${(stepIdx + 1) / steps.length * 100}%` }} />
         </div>
 
-        <main ref={mainScrollRef} className="flex-1 overflow-y-auto">
+        <main ref={setMainEl} className="flex-1 overflow-y-auto">
           <div className="w-full min-h-full flex items-center justify-center">
             {renderStep()}
           </div>
@@ -762,6 +843,34 @@ export default function Viewer() {
           slide={selectedSlide}
           onClose={() => setSelectedSlide(null)} />
       }
+
+      {/* Mid-quiz leave confirmation */}
+      {leaveConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setLeaveConfirm(null)} />
+          <div className="relative bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full z-10">
+            <div className="flex items-center gap-2 mb-2">
+              <AlertTriangle className="w-5 h-5 text-amber-500" />
+              <h3 className="text-base font-bold text-gray-900">Leave quiz in progress?</h3>
+            </div>
+            <p className="text-sm text-gray-600 mb-2">
+              If you leave now, your answered items will be recorded.
+              Unanswered items will be <strong className="text-red-600">marked wrong</strong>.
+            </p>
+            <p className="text-xs text-gray-400 mb-5">
+              This counts as a completed attempt and cannot be undone.
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setLeaveConfirm(null)} className="rounded-full">
+                Stay
+              </Button>
+              <Button onClick={handleLeaveConfirmed} className="bg-red-600 hover:bg-red-700 text-white rounded-full">
+                Leave and submit
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>);
 
 }

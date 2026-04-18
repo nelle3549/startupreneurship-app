@@ -26,11 +26,11 @@ function processContent(html) {
     );
 }
 
-export default function LessonRenderer({ section, onActivityComplete, lessonObjectives }) {
+export default function LessonRenderer({ section, onActivityComplete, lessonObjectives, studentProgress, lessonAccess, mcqSubmitRef, onMcqInProgressChange }) {
   // Render lesson objectives at the start (only once)
   if (!section && lessonObjectives && lessonObjectives.length > 0) {
     return (
-      <div className="mx-auto px-6 sm:px-8 py-6 sm:py-8 max-w-3xl">
+      <div className="w-full mx-auto px-6 sm:px-8 py-6 sm:py-8 max-w-3xl">
         <div className="p-5 sm:p-6 bg-blue-50 rounded-xl border border-blue-200">
           <h2 className="text-xl sm:text-2xl font-bold text-[#0B5394] mb-4">Learning Objectives</h2>
           <ul className="space-y-2">
@@ -51,7 +51,7 @@ export default function LessonRenderer({ section, onActivityComplete, lessonObje
   // Render text sections (Quill HTML output)
   if (section.type === "text") {
     return (
-      <div className="mx-auto px-6 sm:px-8 py-6 sm:py-8 max-w-3xl">
+      <div className="w-full mx-auto px-6 sm:px-8 py-6 sm:py-8 max-w-3xl">
         {section.title && (
           <h2 className="text-xl sm:text-2xl font-bold text-[#0B5394] mb-4">{section.title}</h2>
         )}
@@ -63,7 +63,7 @@ export default function LessonRenderer({ section, onActivityComplete, lessonObje
   // Render image sections
   if (section.type === "image") {
     return (
-      <div className="mx-auto px-6 sm:px-8 py-6 sm:py-8 max-w-3xl">
+      <div className="w-full mx-auto px-6 sm:px-8 py-6 sm:py-8 max-w-3xl">
         {section.title && (
           <h2 className="text-xl sm:text-2xl font-bold text-[#0B5394] mb-4">{section.title}</h2>
         )}
@@ -87,7 +87,7 @@ export default function LessonRenderer({ section, onActivityComplete, lessonObje
   // Render video sections
   if (section.type === "video") {
     return (
-      <div className="mx-auto px-6 sm:px-8 py-6 sm:py-8 max-w-3xl">
+      <div className="w-full mx-auto px-6 sm:px-8 py-6 sm:py-8 max-w-3xl">
         {section.title && (
           <h2 className="text-xl sm:text-2xl font-bold text-[#0B5394] mb-4">{section.title}</h2>
         )}
@@ -121,7 +121,7 @@ export default function LessonRenderer({ section, onActivityComplete, lessonObje
     const style = styles[section.style] || styles.action;
 
     return (
-      <div className="mx-auto px-6 sm:px-8 py-6 sm:py-8 max-w-3xl">
+      <div className="w-full mx-auto px-6 sm:px-8 py-6 sm:py-8 max-w-3xl">
         <div className={`${style.bg} border ${style.border} rounded-xl p-5 sm:p-6`}>
           <div className="flex items-center gap-2 mb-3">
             {style.icon}
@@ -142,15 +142,23 @@ export default function LessonRenderer({ section, onActivityComplete, lessonObje
         : section.question
           ? [{ question: section.question, options: section.options, correct_answer_index: section.correct_answer_index }]
           : [];
+      const previousScore = studentProgress?.activity_scores?.mcq;
+      const isRetaking = studentProgress?.status === "retake_in_progress";
+      const showPastResult = previousScore !== undefined && previousScore !== null && !isRetaking;
       return (
-        <div className="max-w-2xl mx-auto py-8 px-4">
-          <div className="p-3 mb-4 bg-purple-50 rounded-lg border border-purple-200">
-            <p className="text-xs font-semibold text-purple-700">Graded Assessment — {Math.min(5, pool.length)} of {pool.length} questions</p>
-          </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">{section.title}</h2>
+        <div className="w-full max-w-2xl mx-auto py-8 px-4">
           <MCQActivity
             questions={pool}
-            onComplete={score => onActivityComplete(section.id, score)}
+            title={section.title}
+            onComplete={score => onActivityComplete(section.id, score, "mcq")}
+            previousScore={showPastResult ? previousScore : undefined}
+            highestScore={studentProgress?.highest_score}
+            allScores={studentProgress?.all_scores}
+            retakesEnabled={lessonAccess?.retakes_enabled}
+            maxRetakes={lessonAccess?.max_retakes}
+            retakeAttempts={studentProgress?.retake_attempts || 0}
+            submitRef={mcqSubmitRef}
+            onInProgressChange={onMcqInProgressChange}
           />
         </div>
       );

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Gamepad2, UserPlus, Share2, Check } from "lucide-react";
-import AchievementDialog from "./AchievementDialog";
+import { Gamepad2, UserPlus, Share2, Check, Flame } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/use-toast";
 import { getSavedUser } from "../userStorage";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { entities } from "@/api/entities";
@@ -253,6 +253,7 @@ export default function GameOfTheDay() {
   const [copied, setCopied] = useState(false);
   const currentUser = getSavedUser();
   const loginStreak = currentUser ? getLoginStreak() : 0;
+  const { toast } = useToast();
 
   const { data: dbWords = [] } = useQuery({
     queryKey: ["wordle-words"],
@@ -283,6 +284,13 @@ export default function GameOfTheDay() {
   const handleComplete = (result, tries) => {
     setTriesUsed(tries);
     setGameState(result);
+    if (result === "won" && currentUser) {
+      toast({
+        title: `🎉 Solved in ${tries} ${tries === 1 ? "try" : "tries"}!`,
+        description: loginStreak > 0 ? `🔥 ${loginStreak}-day streak — keep it up!` : undefined,
+        duration: 3500,
+      });
+    }
   };
 
   const handleShare = () => {
@@ -348,20 +356,27 @@ export default function GameOfTheDay() {
             </div>
 
             {/* Post-game overlays */}
-            {gameState === "won" && (
-              currentUser ? (
-                <AchievementDialog
-                  isOpen={true}
-                  onClose={() => setGameState("idle")}
-                  userName={currentUser.first_name ? currentUser.first_name.charAt(0).toUpperCase() + currentUser.first_name.slice(1).toLowerCase() : "Champion"}
-                  loginStreak={loginStreak}
-                  triesUsed={triesUsed}
-                  copied={copied}
-                  onShare={handleShare}
-                />
-              ) : (
-                <GuestStreakDialog onClose={() => setGameState("idle")} emoji="🔥" title="Want to track your winning streak?" subtitle="Create a free account to record your daily wins and build your streak." />
-              )
+            {gameState === "won" && currentUser && (
+              <div className="flex items-center justify-between gap-2 px-4 py-3 border-t border-gray-100 flex-shrink-0 bg-gray-50">
+                {loginStreak > 0 ? (
+                  <div className="flex items-center gap-1.5 text-sm">
+                    <Flame className="w-4 h-4 text-orange-500" />
+                    <span className="font-semibold text-orange-600">{loginStreak}-day streak</span>
+                  </div>
+                ) : <span />}
+                <Button
+                  onClick={handleShare}
+                  variant="outline"
+                  size="sm"
+                  className="rounded-full gap-1.5 border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                >
+                  {copied ? <Check className="w-3.5 h-3.5" /> : <Share2 className="w-3.5 h-3.5" />}
+                  {copied ? "Copied!" : "Share"}
+                </Button>
+              </div>
+            )}
+            {gameState === "won" && !currentUser && (
+              <GuestStreakDialog onClose={() => setGameState("idle")} emoji="🔥" title="Want to track your winning streak?" subtitle="Create a free account to record your daily wins and build your streak." />
             )}
 
             {gameState === "lost" && !currentUser && (

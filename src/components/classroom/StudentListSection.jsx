@@ -33,7 +33,7 @@ export default function StudentListSection({ classroom, isFacilitator }) {
       </div>
 
       {filteredStudents.length > 0 ? (
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3">
           {filteredStudents.map((enrollment) => (
             <Card key={enrollment.id}>
               <CardContent className="pt-6">

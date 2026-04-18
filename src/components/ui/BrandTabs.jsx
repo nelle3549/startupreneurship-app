@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
  */
 export function BrandTabsList({ tabs, className }) {
   return (
-    <TabsList className={cn("bg-white border mb-6 w-full justify-start flex-wrap h-auto gap-1", className)}>
+    <TabsList className={cn("bg-white border mb-5 w-full justify-start flex-wrap h-auto gap-1", className)}>
       {tabs.map(({ value, icon, label, badge }) => (
         <TabsTrigger
           key={value}

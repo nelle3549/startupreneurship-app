@@ -53,16 +53,18 @@ export default function ClassroomHeader({ classroom }) {
   };
 
   return (
-    <div className="bg-white border-b border-gray-100 px-4 sm:px-6 py-6">
+    <div className="bg-white border-b border-gray-100 px-4 sm:px-6 py-5">
       <div className="max-w-7xl mx-auto">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
             <h1 className="text-3xl font-bold text-gray-900 mb-1 truncate">
               {classroom.name}
             </h1>
-            <p className="text-sm text-gray-500 mb-4">{classroom.description}</p>
+            {classroom.description && (
+              <p className="text-sm text-gray-500 mb-3">{classroom.description}</p>
+            )}
 
-            <div className="space-y-3">
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
               {/* Facilitator Info */}
               <div className="flex items-center gap-2 text-sm">
                 <span className="text-gray-600 font-medium">Facilitator:</span>

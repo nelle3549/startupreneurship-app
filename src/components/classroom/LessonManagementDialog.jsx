@@ -65,11 +65,11 @@ export default function LessonManagementDialog({
     try {
       await entities.Announcement.create({
         classroom_id: classroom.id,
-        author_id: "system",
+        author_id: null,
         author_name: classroom.facilitator_id ? "System" : "Classroom",
         author_email: classroom.facilitator_email || "system@classroom.local",
-        title: `New Lesson Available: ${lesson.title}`,
-        content: `Good news! **${lesson.title}** is now unlocked and available for you to start. Click on the Lessons tab to begin!`,
+        title: `New Lesson Available: Lesson ${lesson.num} – ${lesson.title}`,
+        content: `Good news! **Lesson ${lesson.num}: ${lesson.title}** is now unlocked and available for you to start. Click on the Lessons tab to begin!`,
         status: "published",
         is_auto_announcement: true,
         metadata: {

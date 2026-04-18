@@ -122,7 +122,7 @@ export default function AnnouncementsSection({ classroom }) {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Facilitator Controls */}
       {isPrivileged && (
         <div className="flex gap-2 flex-wrap">

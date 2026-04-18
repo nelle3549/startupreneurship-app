@@ -25,18 +25,46 @@ export default function LessonManagementTab({ classrooms, selectedClassroom }) {
   const toggleAccessMutation = useMutation({
     mutationFn: async ({ lessonNum, isOpen }) => {
       const existing = lessonAccess.find(la => la.lesson_number === lessonNum);
+      const wasOpen = existing?.is_open === true;
       if (existing) {
-        return entities.LessonAccess.update(existing.id, { is_open: isOpen });
+        await entities.LessonAccess.update(existing.id, { is_open: isOpen });
       } else {
-        return entities.LessonAccess.create({
+        await entities.LessonAccess.create({
           classroom_id: selectedClassroom,
           year_level_key: classroom.year_level_key,
           lesson_number: lessonNum,
           is_open: isOpen,
         });
       }
+      // Post an auto-announcement only on unlock transitions (not re-lock, not re-save).
+      if (isOpen && !wasOpen) {
+        const lesson = (yearLevel?.lessons || []).find(l => l.num === lessonNum);
+        const title = lesson?.title || `Lesson ${lessonNum}`;
+        try {
+          await entities.Announcement.create({
+            classroom_id: selectedClassroom,
+            author_id: null,
+            author_name: "System",
+            author_email: classroom.facilitator_email || "system@classroom.local",
+            title: `New Lesson Available: Lesson ${lessonNum} – ${title}`,
+            content: `Good news! **Lesson ${lessonNum}: ${title}** is now unlocked and available for you to start. Click on the Lessons tab to begin!`,
+            status: "published",
+            is_auto_announcement: true,
+            metadata: {
+              lesson_number: lessonNum,
+              lesson_title: title,
+              year_level_key: classroom.year_level_key,
+            },
+          });
+        } catch (err) {
+          console.error("Failed to post auto-announcement:", err);
+        }
+      }
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["lesson-access", selectedClassroom] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["lesson-access", selectedClassroom] });
+      queryClient.invalidateQueries({ queryKey: ["classroom-announcements", selectedClassroom] });
+    },
   });
 
   if (!yearLevel) {
