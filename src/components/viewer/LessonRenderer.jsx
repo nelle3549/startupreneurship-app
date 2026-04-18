@@ -136,24 +136,20 @@ export default function LessonRenderer({ section, onActivityComplete, lessonObje
   // Render activity sections
   if (section.type === "activity") {
     if (section.activity_type === "mcq_graded" || section.activity_type === "mcq") {
-      const toViewerQuestion = (src) => ({
-        q: src.q ?? src.question ?? "",
-        options: src.options || [],
-        answer: src.answer ?? src.correct_answer_index ?? 0,
-      });
-      const questions = section.items?.length > 0
-        ? section.items.map(toViewerQuestion)
+      // Pass the full pool — MCQActivity handles randomization internally
+      const pool = section.items?.length > 0
+        ? section.items
         : section.question
-          ? [toViewerQuestion(section)]
+          ? [{ question: section.question, options: section.options, correct_answer_index: section.correct_answer_index }]
           : [];
       return (
         <div className="max-w-2xl mx-auto py-8 px-4">
           <div className="p-3 mb-4 bg-purple-50 rounded-lg border border-purple-200">
-            <p className="text-xs font-semibold text-purple-700">Graded Assessment</p>
+            <p className="text-xs font-semibold text-purple-700">Graded Assessment — {Math.min(5, pool.length)} of {pool.length} questions</p>
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-6">{section.title}</h2>
           <MCQActivity
-            questions={questions}
+            questions={pool}
             onComplete={score => onActivityComplete(section.id, score)}
           />
         </div>

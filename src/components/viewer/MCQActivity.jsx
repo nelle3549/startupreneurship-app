@@ -1,25 +1,62 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, XCircle } from "lucide-react";
+import { CheckCircle, XCircle, RotateCw } from "lucide-react";
 import { pickRandomMCQ } from "../data/activityData";
 
-export default function MCQActivity({ yearLevelKey, questions: customQuestions, onComplete }) {
+const QUIZ_SIZE = 5;
+
+/**
+ * Shuffle array using Fisher-Yates and pick `count` items.
+ * Returns a new array — does not mutate the original.
+ */
+function pickRandom(pool, count) {
+  const shuffled = [...pool].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, Math.min(count, shuffled.length));
+}
+
+export default function MCQActivity({ yearLevelKey, questions: pool, onComplete }) {
+  // seed changes on each mount and on retake, forcing new randomization
+  const [seed, setSeed] = useState(0);
+
   const questions = useMemo(() => {
-    if (customQuestions && customQuestions.length > 0) return customQuestions;
-    return yearLevelKey ? pickRandomMCQ(yearLevelKey, 5) : [];
-  }, [yearLevelKey, customQuestions]);
+    // pool comes from the builder (items array) or from legacy static data
+    if (pool && pool.length > 0) {
+      // Normalize question shape: { q, options, answer }
+      const normalized = pool.map(src => ({
+        q: src.q ?? src.question ?? "",
+        options: src.options || [],
+        answer: src.answer ?? src.correct_answer_index ?? 0,
+      })).filter(q => q.q && q.options.length >= 2);
+
+      // Pick QUIZ_SIZE random questions from the pool
+      return pickRandom(normalized, QUIZ_SIZE);
+    }
+    // Fallback to static data
+    return yearLevelKey ? pickRandomMCQ(yearLevelKey, QUIZ_SIZE) : [];
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pool, yearLevelKey, seed]);
+
   const [currentIdx, setCurrentIdx] = useState(0);
   const [selected, setSelected] = useState(null);
   const [showResult, setShowResult] = useState(false);
   const [score, setScore] = useState(0);
   const [finished, setFinished] = useState(false);
 
+  const handleRetake = useCallback(() => {
+    setSeed(s => s + 1);
+    setCurrentIdx(0);
+    setSelected(null);
+    setShowResult(false);
+    setScore(0);
+    setFinished(false);
+  }, []);
+
   if (questions.length === 0) {
     return (
       <div className="text-center py-8 text-gray-500">
-        <p>No MCQ questions available for this level.</p>
-        <Button onClick={onComplete} className="mt-4">Continue</Button>
+        <p>No MCQ questions available.</p>
+        <Button onClick={() => onComplete(0)} className="mt-4">Continue</Button>
       </div>
     );
   }
@@ -42,19 +79,26 @@ export default function MCQActivity({ yearLevelKey, questions: customQuestions, 
       setShowResult(false);
     } else {
       setFinished(true);
-      const finalScore = selected === q.answer ? score + 1 : score;
+      const finalScore = score + (selected === q.answer ? 1 : 0);
       onComplete(Math.round((finalScore / questions.length) * 100));
     }
   };
 
   if (finished) {
+    const finalScore = score;
     return (
       <div className="text-center py-8">
         <div className="w-20 h-20 rounded-full brand-gradient flex items-center justify-center mx-auto mb-4">
-          <span className="text-white text-2xl font-bold">{score}/{questions.length}</span>
+          <span className="text-white text-2xl font-bold">{finalScore}/{questions.length}</span>
         </div>
         <h3 className="text-xl font-bold text-gray-900 mb-2">Quiz Complete!</h3>
-        <p className="text-gray-500 text-sm">You scored {score} out of {questions.length} questions.</p>
+        <p className="text-gray-500 text-sm mb-6">You scored {finalScore} out of {questions.length} questions.</p>
+        {pool && pool.length > QUIZ_SIZE && (
+          <Button variant="outline" onClick={handleRetake} className="gap-2">
+            <RotateCw className="w-4 h-4" />
+            Retake with New Questions
+          </Button>
+        )}
       </div>
     );
   }
