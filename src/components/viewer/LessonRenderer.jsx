@@ -7,6 +7,25 @@ import { CheckCircle, Rocket, Info, AlertTriangle, Lightbulb } from "lucide-reac
 /** Shared prose class for all HTML content from Quill editor */
 const proseClass = "prose prose-slate max-w-none prose-headings:text-[#0B5394] prose-headings:font-bold prose-p:text-gray-700 prose-p:leading-relaxed prose-li:text-gray-700 prose-strong:text-gray-900 prose-blockquote:border-l-blue-400 prose-blockquote:bg-blue-50 prose-blockquote:py-2 prose-blockquote:px-4 prose-blockquote:rounded-r-lg prose-blockquote:not-italic prose-a:text-blue-600 prose-a:underline prose-img:rounded-xl prose-img:border prose-img:border-gray-200 prose-img:mx-auto prose-table:text-sm prose-th:bg-gray-100 prose-th:px-3 prose-th:py-2 prose-td:px-3 prose-td:py-2 prose-td:border prose-th:border prose-ol:list-decimal prose-ul:list-disc";
 
+/**
+ * Post-process HTML content to ensure iframes (YouTube, Google Drive, etc.) render properly.
+ * - Wraps bare iframes in a responsive container
+ * - Adds proper allow attributes for GDrive playback
+ */
+function processContent(html) {
+  if (!html) return html;
+  // Ensure all iframes have allow attribute for proper playback
+  return html
+    .replace(/<iframe([^>]*?)(?<!\ballow=)[^>]*>/gi, (match, attrs) => {
+      if (match.includes('allow=')) return match;
+      return match.replace('<iframe', '<iframe allow="autoplay; encrypted-media"');
+    })
+    // Wrap bare iframes (not already in a container) in a responsive div
+    .replace(/(<iframe[^>]*class="ql-video"[^>]*><\/iframe>)/gi,
+      '<div class="video-embed-wrapper" style="position:relative;width:100%;aspect-ratio:16/9;margin:1rem 0;border-radius:0.75rem;overflow:hidden;border:1px solid #e5e7eb;">$1</div>'
+    );
+}
+
 export default function LessonRenderer({ section, onActivityComplete, lessonObjectives }) {
   // Render lesson objectives at the start (only once)
   if (!section && lessonObjectives && lessonObjectives.length > 0) {
@@ -36,7 +55,7 @@ export default function LessonRenderer({ section, onActivityComplete, lessonObje
         {section.title && (
           <h2 className="text-xl sm:text-2xl font-bold text-[#0B5394] mb-4">{section.title}</h2>
         )}
-        <div className={proseClass} dangerouslySetInnerHTML={{ __html: section.content }} />
+        <div className={proseClass} dangerouslySetInnerHTML={{ __html: processContent(section.content) }} />
       </div>
     );
   }
@@ -59,7 +78,7 @@ export default function LessonRenderer({ section, onActivityComplete, lessonObje
           <p className="text-sm text-gray-500 text-center mb-4 italic">{section.caption}</p>
         )}
         {section.content && (
-          <div className={proseClass} dangerouslySetInnerHTML={{ __html: section.content }} />
+          <div className={proseClass} dangerouslySetInnerHTML={{ __html: processContent(section.content) }} />
         )}
       </div>
     );
@@ -85,7 +104,7 @@ export default function LessonRenderer({ section, onActivityComplete, lessonObje
           <p className="text-sm text-gray-500 text-center mb-4 italic">{section.caption}</p>
         )}
         {section.content && (
-          <div className={proseClass} dangerouslySetInnerHTML={{ __html: section.content }} />
+          <div className={proseClass} dangerouslySetInnerHTML={{ __html: processContent(section.content) }} />
         )}
       </div>
     );
@@ -108,7 +127,7 @@ export default function LessonRenderer({ section, onActivityComplete, lessonObje
             {style.icon}
             <h2 className={`text-lg font-bold ${style.titleColor}`}>{section.title || "Note"}</h2>
           </div>
-          <div className={`${proseClass} prose-p:text-gray-600`} dangerouslySetInnerHTML={{ __html: section.content }} />
+          <div className={`${proseClass} prose-p:text-gray-600`} dangerouslySetInnerHTML={{ __html: processContent(section.content) }} />
         </div>
       </div>
     );

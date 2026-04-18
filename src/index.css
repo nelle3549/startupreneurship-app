@@ -97,6 +97,17 @@
   margin: 1rem 0;
 }
 
+/* Video embed wrapper for processed content */
+.video-embed-wrapper iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+  border-radius: 0.75rem;
+}
+
 /* Quill editor images */
 .prose img {
   border-radius: 0.75rem;

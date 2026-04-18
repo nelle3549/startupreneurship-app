@@ -5,8 +5,32 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import ReactQuill from "react-quill";
+import ReactQuill, { Quill } from "react-quill";
 import "react-quill/dist/quill.snow.css";
+
+// Extend Quill's Video blot to accept Google Drive URLs (not just YouTube/Vimeo)
+const BlockEmbed = Quill.import("blots/block/embed");
+class VideoBlot extends BlockEmbed {
+  static create(url) {
+    const node = super.create();
+    node.setAttribute("src", url);
+    node.setAttribute("frameborder", "0");
+    node.setAttribute("allowfullscreen", true);
+    node.setAttribute("allow", "autoplay; encrypted-media");
+    return node;
+  }
+  static value(node) {
+    return node.getAttribute("src");
+  }
+  // Accept any URL — YouTube, Google Drive, Vimeo, etc.
+  static sanitize(url) {
+    return url;
+  }
+}
+VideoBlot.blotName = "video";
+VideoBlot.tagName = "IFRAME";
+VideoBlot.className = "ql-video";
+Quill.register(VideoBlot, true);
 import {
   ChevronUp, ChevronDown, Plus, Trash2, Edit2, X, CheckCircle, HelpCircle, AlertCircle, Eye
 } from "lucide-react";
