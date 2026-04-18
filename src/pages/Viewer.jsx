@@ -67,6 +67,7 @@ export default function Viewer() {
   const isResume = params.get("resume") === "true";
   const isReplay = params.get("replay") === "true";
   const returnTo = params.get("returnTo"); // e.g. "CourseBuilder"
+  const returnTab = params.get("returnTab"); // e.g. "lessons"
   const navigate = useNavigate();
   const { user, isAdmin, isFacilitator } = useCurrentUser();
   const isStudent = !isAdmin && !isFacilitator;
@@ -307,7 +308,7 @@ export default function Viewer() {
     if (returnTo === "CourseBuilder") {
       navigate(`/CourseBuilder?yearLevel=${yearLevelKey}`);
     } else if (classroomId) {
-      window.location.href = `/ClassroomView?id=${classroomId}`;
+      window.location.href = `/ClassroomView?id=${classroomId}${returnTab ? `&tab=${returnTab}` : ''}`;
     } else {
       navigate("/Home");
     }
@@ -697,7 +698,7 @@ export default function Viewer() {
             </a>
           ) : classroomId ? (
             <a
-              href={`/ClassroomView?id=${classroomId}`}
+              href={`/ClassroomView?id=${classroomId}${returnTab ? `&tab=${returnTab}` : ''}`}
               className="flex items-center gap-1.5 text-sm px-3 py-1.5 hover:bg-gray-100 rounded-lg text-gray-500 hover:text-gray-700"
             >
               <BookOpen className="w-4 h-4" />

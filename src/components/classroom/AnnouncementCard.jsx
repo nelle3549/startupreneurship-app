@@ -209,7 +209,7 @@ export default function AnnouncementCard({
         {/* Auto-Announcement CTA Button */}
         {announcement.is_auto_announcement && announcement.metadata?.lesson_number && (
           <Link
-            to={`/Viewer?yearLevel=${announcement.metadata.year_level_key}&lesson=${announcement.metadata.lesson_number}&classroomId=${announcement.classroom_id}`}
+            to={`/Viewer?yearLevel=${announcement.metadata.year_level_key}&lesson=${announcement.metadata.lesson_number}&classroomId=${announcement.classroom_id}&returnTab=announcements`}
             className="mb-3 inline-block"
           >
             <Button size="sm" className="brand-gradient text-white rounded-full gap-1">

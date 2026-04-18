@@ -188,7 +188,7 @@ export default function LessonsTab({ classroom }) {
               <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-400 inline-block" />{lesson0PrivProgress.filter(p => !p.completed && p.current_step_index > 0).length} in progress</span>
               <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-gray-300 inline-block" />{Math.max(0, enrollments.length - lesson0PrivProgress.filter(p => p.completed).length - lesson0PrivProgress.filter(p => !p.completed && p.current_step_index > 0).length)} not started</span>
             </div>
-            <Link to={`/Viewer?yearLevel=${classroom.year_level_key}&lesson=0&classroomId=${classroom.id}`}>
+            <Link to={`/Viewer?yearLevel=${classroom.year_level_key}&lesson=0&classroomId=${classroom.id}&returnTab=lessons`}>
               <Button size="sm" variant="outline" className="w-full gap-1 text-xs">
                 <Eye className="w-3 h-3" />View
               </Button>
@@ -196,7 +196,7 @@ export default function LessonsTab({ classroom }) {
           </CardContent>
         </Card>
       ) : (
-        <Link to={`/Viewer?yearLevel=${classroom.year_level_key}&lesson=0&classroomId=${classroom.id}`}>
+        <Link to={`/Viewer?yearLevel=${classroom.year_level_key}&lesson=0&classroomId=${classroom.id}&returnTab=lessons`}>
           <Card className="transition-shadow hover:shadow-md cursor-pointer">
             <CardContent className="p-5">
               <div className="flex items-start justify-between mb-2">
@@ -258,7 +258,7 @@ export default function LessonsTab({ classroom }) {
                   </div>
                   <div className="flex gap-2">
                     <Link
-                      to={`/Viewer?yearLevel=${classroom.year_level_key}&lesson=${lesson.num}&classroomId=${classroom.id}`}
+                      to={`/Viewer?yearLevel=${classroom.year_level_key}&lesson=${lesson.num}&classroomId=${classroom.id}&returnTab=lessons`}
                       className="flex-1"
                     >
                       <Button size="sm" variant="outline" className="w-full gap-1 text-xs">
@@ -349,7 +349,7 @@ export default function LessonsTab({ classroom }) {
                     studentProgress={prog.all_scores || []}
                     onActivitySelect={(activityId) => {
                       // Navigate to activity completion page
-                      window.location.href = `/Viewer?yearLevel=${classroom.year_level_key}&lesson=${lesson.num}&classroomId=${classroom.id}&activity=${activityId}`;
+                      window.location.href = `/Viewer?yearLevel=${classroom.year_level_key}&lesson=${lesson.num}&classroomId=${classroom.id}&returnTab=lessons&activity=${activityId}`;
                     }}
                   />
                 )}
@@ -363,7 +363,7 @@ export default function LessonsTab({ classroom }) {
           return (
             <Link
               key={lesson.num}
-              to={`/Viewer?yearLevel=${classroom.year_level_key}&lesson=${lesson.num}&classroomId=${classroom.id}`}
+              to={`/Viewer?yearLevel=${classroom.year_level_key}&lesson=${lesson.num}&classroomId=${classroom.id}&returnTab=lessons`}
             >
               {cardInner}
             </Link>
