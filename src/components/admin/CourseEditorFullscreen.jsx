@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef, startTransition } from "react";
 import { entities } from "@/api/entities";
+import { uploadLessonImage } from "@/api/storage";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,6 +45,32 @@ import {
   AlertDialogDescription,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+// Open a file picker, upload the image to Supabase, and return its public URL.
+function pickAndUploadImage() {
+  return new Promise((resolve, reject) => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (!file) return resolve(null);
+      try {
+        const { publicUrl } = await uploadLessonImage(file, { folder: "quill" });
+        resolve(publicUrl);
+      } catch (err) {
+        reject(err);
+      }
+    };
+    input.click();
+  });
+}
 
 const modules = {
   toolbar: {
@@ -55,17 +82,34 @@ const modules = {
       ["link", "image", "video"],
       ["clean"]
     ],
+    handlers: {
+      image: function () {
+        const quill = this.quill;
+        pickAndUploadImage()
+          .then((url) => {
+            if (!url) return;
+            const range = quill.getSelection(true);
+            quill.insertEmbed(range.index, "image", url, "user");
+            quill.setSelection(range.index + 1, 0, "user");
+          })
+          .catch((err) => {
+            console.error("Image upload failed:", err);
+            alert(`Image upload failed: ${err.message || err}`);
+          });
+      },
+    },
   },
 };
 
 export default function CourseEditorFullscreen({ yearLevel, onClose }) {
   const queryClient = useQueryClient();
-  const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
-  const [pendingAction, setPendingAction] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState(null);
-  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null); // { kind: "section"|"lesson", id/idx, label }
+  const autosaveTimerRef = useRef(null);
+  const erroredSignatureRef = useRef(null);
+  const inFlightSaveRef = useRef(null); // Promise of the current save (for flush-on-navigate)
 
   // Fetch Course Details from DB
   const { data: dbCourseDetails = null } = useQuery({
@@ -121,7 +165,7 @@ export default function CourseEditorFullscreen({ yearLevel, onClose }) {
   };
 
   // Lesson Content State
-  const { data: dbLessonContent = null } = useQuery({
+  const { data: dbLessonContent = null, isLoading: lessonContentLoading, isFetching: lessonContentFetching } = useQuery({
     queryKey: ["lesson-content", yearLevel.key, selectedLessonNum],
     queryFn: () => {
       if (!selectedLessonNum) return null;
@@ -133,6 +177,12 @@ export default function CourseEditorFullscreen({ yearLevel, onClose }) {
     enabled: !!selectedLessonNum
   });
 
+  // True while the lesson-content query hasn't resolved for the currently
+  // selected lesson. Autosave must be blocked during this window — otherwise
+  // a save triggered by `details`/`lessons` changes can write `sections: []`
+  // for a lesson whose real content hasn't arrived yet, wiping the row.
+  const lessonContentNotReady = !!selectedLessonNum && (lessonContentLoading || lessonContentFetching);
+
   const [sections, setSections] = useState([]);
   const [initialSections, setInitialSections] = useState([]);
   const [lessonObjectives, setLessonObjectives] = useState([]);
@@ -140,23 +190,27 @@ export default function CourseEditorFullscreen({ yearLevel, onClose }) {
   const [newObjective, setNewObjective] = useState("");
   const [newLessonObjective, setNewLessonObjective] = useState("");
 
-  // Sync lesson content from DB
+  // Sync lesson content from DB. Only touch section/objective state once the
+  // query has actually resolved for this lesson — otherwise we can briefly
+  // overwrite real content with [] while the fetch is still in flight.
   useEffect(() => {
+    if (!selectedLessonNum) return;
+    if (lessonContentNotReady) return;
     if (dbLessonContent?.sections) {
       setSections(dbLessonContent.sections);
       setInitialSections(JSON.parse(JSON.stringify(dbLessonContent.sections)));
-    } else if (selectedLessonNum) {
+    } else {
       setSections([]);
       setInitialSections([]);
     }
     if (dbLessonContent?.lesson_objectives) {
       setLessonObjectives(dbLessonContent.lesson_objectives);
       setInitialLessonObjectives(JSON.parse(JSON.stringify(dbLessonContent.lesson_objectives)));
-    } else if (selectedLessonNum) {
+    } else {
       setLessonObjectives([]);
       setInitialLessonObjectives([]);
     }
-  }, [dbLessonContent, selectedLessonNum]);
+  }, [dbLessonContent, selectedLessonNum, lessonContentNotReady]);
 
   // Check for unsaved changes
   const hasUnsavedChanges = useMemo(() => {
@@ -171,134 +225,75 @@ export default function CourseEditorFullscreen({ yearLevel, onClose }) {
     return sections.filter(s => s.type === "activity" && s.activity_type === "mcq").length;
   };
 
-  // Handle lesson switch with unsaved check
-  const handleSelectLesson = useCallback((lessonNum) => {
-    if (hasUnsavedChanges && selectedLessonNum !== null) {
-      setPendingAction({ type: "selectLesson", value: lessonNum });
-      setShowUnsavedDialog(true);
-      return;
-    }
-    setSelectedLessonNum(lessonNum);
-    setSections([]);
-    setLessonObjectives([]);
-  }, [hasUnsavedChanges, selectedLessonNum]);
+  // Signature used to avoid retrying a save that failed with unchanged state
+  const stateSignature = useMemo(
+    () => JSON.stringify({ details, lessons, sections, lessonObjectives, selectedLessonNum }),
+    [details, lessons, sections, lessonObjectives, selectedLessonNum]
+  );
 
-  // Handle close with unsaved check
-  const handleCloseClick = useCallback(() => {
-    if (hasUnsavedChanges) {
-      setPendingAction({ type: "close" });
-      setShowUnsavedDialog(true);
-      return;
-    }
-    onClose();
-  }, [hasUnsavedChanges, onClose]);
-
-  // Handle unsaved dialog actions
-  const handleDiscardChanges = () => {
-    setShowUnsavedDialog(false);
-    if (pendingAction?.type === "selectLesson") {
-      setSelectedLessonNum(pendingAction.value);
-      setSections([]);
-      setLessonObjectives([]);
-    } else if (pendingAction?.type === "close") {
-      onClose();
-    }
-    setPendingAction(null);
-  };
-
-  const handleSaveAndContinue = async () => {
-    await handleSaveAll();
-    setShowUnsavedDialog(false);
-    if (pendingAction?.type === "selectLesson") {
-      setSelectedLessonNum(pendingAction.value);
-      setSections([]);
-      setLessonObjectives([]);
-    } else if (pendingAction?.type === "close") {
-      onClose();
-    }
-    setPendingAction(null);
-  };
-
-  // Save all changes
-  const handleSaveAll = async () => {
-    setIsSaving(true);
-    setSaveError(null);
-    setSaveSuccess(false);
-
+  // Core save — used by autosave and by flush-on-navigate. Returns a Promise.
+  const runSave = useCallback(async ({ detailsSnap, lessonsSnap, sectionsSnap, objectivesSnap, lessonNumSnap, signature }) => {
+    // Save-side state updates are low-priority so they don't interrupt typing.
+    startTransition(() => {
+      setIsSaving(true);
+      setSaveError(null);
+    });
     try {
-      // Validate graded activities for selected lesson
-      if (selectedLessonNum) {
-        const mcqSections = sections.filter(s => s.type === "activity" && s.activity_type === "mcq");
+      // Validate graded activities for the captured lesson snapshot
+      if (lessonNumSnap) {
+        const mcqSections = sectionsSnap.filter(s => s.type === "activity" && s.activity_type === "mcq");
         if (mcqSections.length > 1) {
           throw new Error("Only one MCQ activity is allowed per lesson.");
         }
-        if (mcqSections.length === 1 && sections[sections.length - 1]?.activity_type !== "mcq") {
+        if (mcqSections.length === 1 && sectionsSnap[sectionsSnap.length - 1]?.activity_type !== "mcq") {
           throw new Error("The graded MCQ activity must be the last section in the lesson.");
         }
       }
 
-      // Save course details if on Course Details tab
-      if (selectedLessonNum === null) {
-        const existing = await entities.CourseDetails.filter({
-          year_level_key: yearLevel.key
-        });
-
+      // Save course details when on Course Details tab
+      if (lessonNumSnap === null) {
+        const existing = await entities.CourseDetails.filter({ year_level_key: yearLevel.key });
+        const payload = {
+          subtitle: detailsSnap.subtitle,
+          quote: detailsSnap.quote,
+          quoteAuthor: detailsSnap.quoteAuthor,
+          summary: detailsSnap.summary,
+          objectives: detailsSnap.objectives,
+        };
         if (existing.length > 0) {
-          await entities.CourseDetails.update(existing[0].id, {
-            subtitle: details.subtitle,
-            quote: details.quote,
-            quoteAuthor: details.quoteAuthor,
-            summary: details.summary,
-            objectives: details.objectives
-          });
+          await entities.CourseDetails.update(existing[0].id, payload);
         } else {
-          await entities.CourseDetails.create({
-            year_level_key: yearLevel.key,
-            subtitle: details.subtitle,
-            quote: details.quote,
-            quoteAuthor: details.quoteAuthor,
-            summary: details.summary,
-            objectives: details.objectives
-          });
+          await entities.CourseDetails.create({ year_level_key: yearLevel.key, ...payload });
         }
       }
 
-      // Save lesson content if a lesson is selected
-      if (selectedLessonNum) {
+      // Save lesson content when a lesson is selected
+      if (lessonNumSnap) {
         const existingContent = await entities.LessonContent.filter({
           year_level_key: yearLevel.key,
-          lesson_number: selectedLessonNum
+          lesson_number: lessonNumSnap,
         });
-
+        const payload = { sections: sectionsSnap, lesson_objectives: objectivesSnap };
         if (existingContent.length > 0) {
-          await entities.LessonContent.update(existingContent[0].id, {
-            sections: sections,
-            lesson_objectives: lessonObjectives
-          });
+          await entities.LessonContent.update(existingContent[0].id, payload);
         } else {
           await entities.LessonContent.create({
             year_level_key: yearLevel.key,
-            lesson_number: selectedLessonNum,
-            sections: sections,
-            lesson_objectives: lessonObjectives
+            lesson_number: lessonNumSnap,
+            ...payload,
           });
         }
       }
-
-      // Update initial states to clear unsaved changes flag
-      setInitialDetails(JSON.parse(JSON.stringify(details)));
-      setInitialSections(JSON.parse(JSON.stringify(sections)));
-      setInitialLessonObjectives(JSON.parse(JSON.stringify(lessonObjectives)));
 
       // Save lessons + details to Courseware entity (single source of truth)
       const existingCw = await entities.Courseware.filter({ key: yearLevel.key });
       const cwPayload = {
-        lessons,
-        subtitle: details.subtitle,
-        summary: details.summary,
-        quote: details.quote,
-        quoteAuthor: details.quoteAuthor,
-        objectives: details.objectives,
+        lessons: lessonsSnap,
+        subtitle: detailsSnap.subtitle,
+        summary: detailsSnap.summary,
+        quote: detailsSnap.quote,
+        quoteAuthor: detailsSnap.quoteAuthor,
+        objectives: detailsSnap.objectives,
       };
       if (existingCw.length > 0) {
         await entities.Courseware.update(existingCw[0].id, cwPayload);
@@ -312,20 +307,147 @@ export default function CourseEditorFullscreen({ yearLevel, onClose }) {
           ...cwPayload,
         });
       }
-      setInitialLessons(JSON.parse(JSON.stringify(lessons)));
+
+      // Mark this snapshot as saved. Only overwrite initial-state refs that
+      // match the saved snapshot so edits made during the save aren't clobbered.
+      // Wrapped in startTransition so post-save re-renders don't interrupt typing.
+      startTransition(() => {
+        setInitialDetails(prev => (JSON.stringify(prev) === JSON.stringify(detailsSnap) ? prev : JSON.parse(JSON.stringify(detailsSnap))));
+        setInitialLessons(prev => (JSON.stringify(prev) === JSON.stringify(lessonsSnap) ? prev : JSON.parse(JSON.stringify(lessonsSnap))));
+        setInitialSections(prev => (JSON.stringify(prev) === JSON.stringify(sectionsSnap) ? prev : JSON.parse(JSON.stringify(sectionsSnap))));
+        setInitialLessonObjectives(prev => (JSON.stringify(prev) === JSON.stringify(objectivesSnap) ? prev : JSON.parse(JSON.stringify(objectivesSnap))));
+        setLastSavedAt(new Date());
+      });
 
       queryClient.invalidateQueries({ queryKey: ["course-details", yearLevel.key] });
       queryClient.invalidateQueries({ queryKey: ["lesson-content"] });
       queryClient.invalidateQueries({ queryKey: ["coursewares"] });
-      setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 3000);
+      erroredSignatureRef.current = null;
     } catch (err) {
-      setSaveError(err.message || "Failed to save changes");
-      console.error("Save error:", err);
+      erroredSignatureRef.current = signature;
+      startTransition(() => setSaveError(err.message || "Failed to save changes"));
+      console.error("Autosave error:", err);
     } finally {
-      setIsSaving(false);
+      startTransition(() => setIsSaving(false));
     }
-  };
+  }, [queryClient, yearLevel.key, yearLevel.grade, yearLevel.segment]);
+
+  // Flush: run any pending autosave immediately and wait for it.
+  const flushSave = useCallback(async () => {
+    if (autosaveTimerRef.current) {
+      clearTimeout(autosaveTimerRef.current);
+      autosaveTimerRef.current = null;
+    }
+    if (inFlightSaveRef.current) {
+      await inFlightSaveRef.current;
+    }
+    // Refuse to flush while the current lesson's content hasn't arrived yet —
+    // local sections state is [] as a placeholder and would wipe the DB row.
+    if (lessonContentNotReady) return;
+    if (hasUnsavedChanges && erroredSignatureRef.current !== stateSignature) {
+      inFlightSaveRef.current = runSave({
+        detailsSnap: details,
+        lessonsSnap: lessons,
+        sectionsSnap: sections,
+        objectivesSnap: lessonObjectives,
+        lessonNumSnap: selectedLessonNum,
+        signature: stateSignature,
+      });
+      try { await inFlightSaveRef.current; } finally { inFlightSaveRef.current = null; }
+    }
+  }, [hasUnsavedChanges, stateSignature, details, lessons, sections, lessonObjectives, selectedLessonNum, runSave, lessonContentNotReady]);
+
+  // Autosave effect — debounce 5s after last change (save on idle)
+  useEffect(() => {
+    if (!hasUnsavedChanges) return;
+    if (isSaving) return;
+    // Block autosave while the currently selected lesson's content hasn't
+    // loaded yet. Otherwise a save triggered by `details` or `lessons`
+    // changes can write the pre-load `sections: []` into a lesson that
+    // actually has content on the server — wiping it.
+    if (lessonContentNotReady) return;
+    if (erroredSignatureRef.current === stateSignature) return;
+    if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
+    const detailsSnap = details;
+    const lessonsSnap = lessons;
+    const sectionsSnap = sections;
+    const objectivesSnap = lessonObjectives;
+    const lessonNumSnap = selectedLessonNum;
+    const signature = stateSignature;
+    autosaveTimerRef.current = setTimeout(() => {
+      autosaveTimerRef.current = null;
+      inFlightSaveRef.current = runSave({ detailsSnap, lessonsSnap, sectionsSnap, objectivesSnap, lessonNumSnap, signature });
+      inFlightSaveRef.current.finally(() => { inFlightSaveRef.current = null; });
+    }, 5000);
+    return () => {
+      if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
+    };
+  }, [hasUnsavedChanges, isSaving, stateSignature, details, lessons, sections, lessonObjectives, selectedLessonNum, runSave, lessonContentNotReady]);
+
+  // Save immediately when focus moves out of the currently edited section
+  // (e.g. user clicks a different section card, or clicks outside the editor).
+  useEffect(() => {
+    let currentSectionId = null;
+    const handler = () => {
+      const el = document.activeElement;
+      const card = el?.closest?.("[data-section-id]");
+      const id = card?.getAttribute("data-section-id") || null;
+      if (id !== currentSectionId) {
+        // Focus moved to a different section (or out of all sections).
+        // If the user was editing a section and has now left it, flush pending save.
+        if (currentSectionId !== null) {
+          flushSave();
+        }
+        currentSectionId = id;
+      }
+    };
+    // focusin bubbles, focus does not — use focusin on document.
+    document.addEventListener("focusin", handler);
+    return () => document.removeEventListener("focusin", handler);
+  }, [flushSave]);
+
+  // Warn on tab close / navigation away if a save is pending or in flight
+  useEffect(() => {
+    const handler = (e) => {
+      if (hasUnsavedChanges || isSaving) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [hasUnsavedChanges, isSaving]);
+
+  // Autosave status for UI
+  const autosaveStatus = isSaving
+    ? "saving"
+    : saveError
+      ? "error"
+      : hasUnsavedChanges
+        ? "pending"
+        : lastSavedAt
+          ? "saved"
+          : "idle";
+
+  // Lesson switch — flush pending save first so nothing is lost
+  const handleSelectLesson = useCallback(async (lessonNum) => {
+    await flushSave();
+    setSelectedLessonNum(lessonNum);
+    setSections([]);
+    setLessonObjectives([]);
+  }, [flushSave]);
+
+  // Close — flush pending save first
+  const handleCloseClick = useCallback(async () => {
+    await flushSave();
+    onClose();
+  }, [flushSave, onClose]);
+
+  // Preview — flush pending save so the preview sees the latest content
+  const handlePreview = useCallback(async (lessonNum) => {
+    await flushSave();
+    window.open(`/Viewer?yearLevel=${yearLevel.key}&lesson=${lessonNum}&returnTo=CourseBuilder`, "_blank");
+  }, [flushSave, yearLevel.key]);
 
   // Section management
   const addSection = () => {
@@ -503,12 +625,6 @@ export default function CourseEditorFullscreen({ yearLevel, onClose }) {
           <p className="text-sm text-gray-500">{yearLevel.bookTitle}</p>
         </div>
         <div className="flex items-center gap-3">
-          {hasUnsavedChanges && (
-            <div className="flex items-center gap-2 text-amber-600 text-sm">
-              <AlertCircle className="w-4 h-4" />
-              <span>Unsaved changes</span>
-            </div>
-          )}
           <Button variant="ghost" size="icon" onClick={handleCloseClick} className="text-gray-600">
             <X className="w-5 h-5" />
           </Button>
@@ -522,26 +638,34 @@ export default function CourseEditorFullscreen({ yearLevel, onClose }) {
           <div className="p-6 space-y-6">
             {/* Lessons List */}
             <div>
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center justify-between mb-3">
                 <h2 className="text-lg font-bold text-gray-900">Lessons</h2>
-                <div className="flex gap-1">
-                  <Button onClick={() => addLesson("lesson")} size="sm" className="bg-blue-600 text-white gap-1">
-                    <Plus className="w-3 h-3" />
-                    Lesson
-                  </Button>
-                  <Button onClick={() => addLesson("milestone")} size="sm" className="bg-amber-600 text-white gap-1">
-                    <Plus className="w-3 h-3" />
-                    Milestone
-                  </Button>
-                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white gap-1">
+                      <Plus className="w-3.5 h-3.5" />
+                      Add
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-40">
+                    <DropdownMenuItem onClick={() => addLesson("lesson")} className="gap-2">
+                      <Plus className="w-3.5 h-3.5 text-blue-600" />
+                      Lesson
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => addLesson("milestone")} className="gap-2">
+                      <Plus className="w-3.5 h-3.5 text-amber-600" />
+                      Milestone
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <div
                   onClick={() => handleSelectLesson(null)}
-                  className={`p-3 rounded-lg cursor-pointer border transition-colors ${
+                  className={`px-3 py-2 rounded-md cursor-pointer border transition-colors ${
                     selectedLessonNum === null
                       ? "bg-blue-50 border-blue-300"
-                      : "bg-white border-gray-200 hover:bg-gray-50"
+                      : "bg-white border-transparent hover:bg-gray-50"
                   }`}
                 >
                   <p className="text-sm font-semibold text-gray-900">Course Details</p>
@@ -550,47 +674,52 @@ export default function CourseEditorFullscreen({ yearLevel, onClose }) {
                   <div
                     key={idx}
                     onClick={() => handleSelectLesson(lesson.num)}
-                    className={`p-3 rounded-lg cursor-pointer border transition-colors ${
+                    className={`group px-3 py-2 rounded-md cursor-pointer border transition-colors ${
                       selectedLessonNum === lesson.num
                         ? "bg-blue-50 border-blue-300"
-                        : "bg-white border-gray-200 hover:bg-gray-50"
+                        : "bg-white border-transparent hover:bg-gray-50"
                     }`}
                   >
-                    <div className="flex items-start justify-between gap-2 mb-1">
-                      <p className="text-sm font-semibold text-gray-900">
-                        {lesson.type === "milestone" ? (
-                          <span className="text-amber-700">Milestone {lesson.milestoneNum || lessons.filter((l, li) => l.type === "milestone" && li <= idx).length}</span>
-                        ) : (
-                          <>Lesson {lessons.filter((l, li) => l.type !== "milestone" && li < idx).length + 1}</>
-                        )}
-                      </p>
-                      <div className="flex gap-1 flex-shrink-0">
+                    <div className="flex items-center gap-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-medium text-gray-500">
+                          {lesson.type === "milestone" ? (
+                            <span className="text-amber-700">Milestone {lesson.milestoneNum || lessons.filter((l, li) => l.type === "milestone" && li <= idx).length}</span>
+                          ) : (
+                            <>Lesson {lessons.filter((l, li) => l.type !== "milestone" && li < idx).length + 1}</>
+                          )}
+                        </p>
+                        <p className="text-sm font-medium text-gray-900 truncate">{lesson.title || <span className="italic text-gray-400">Untitled</span>}</p>
+                      </div>
+                      <div className="flex gap-0.5 flex-shrink-0 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
                         <button
                           onClick={e => { e.stopPropagation(); moveLesson(idx, "up"); }}
                           disabled={idx === 0}
-                          className="text-gray-400 hover:text-gray-600 disabled:opacity-50"
+                          className="p-1 rounded hover:bg-gray-200 text-gray-500 disabled:opacity-30"
+                          aria-label="Move up"
                         >
-                          <ChevronUp className="w-3 h-3" />
+                          <ChevronUp className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={e => { e.stopPropagation(); moveLesson(idx, "down"); }}
                           disabled={idx === lessons.length - 1}
-                          className="text-gray-400 hover:text-gray-600 disabled:opacity-50"
+                          className="p-1 rounded hover:bg-gray-200 text-gray-500 disabled:opacity-30"
+                          aria-label="Move down"
                         >
-                          <ChevronDown className="w-3 h-3" />
+                          <ChevronDown className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={e => {
                             e.stopPropagation();
                             setConfirmDelete({ kind: "lesson", idx, label: `Lesson ${lesson.num}: ${lesson.title || ""}` });
                           }}
-                          className="text-gray-400 hover:text-red-600"
+                          className="p-1 rounded hover:bg-red-50 text-gray-500 hover:text-red-600"
+                          aria-label="Delete"
                         >
-                          <Trash2 className="w-3 h-3" />
+                          <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     </div>
-                    <p className="text-xs text-gray-600">{lesson.title}</p>
                   </div>
                 ))}
               </div>
@@ -602,11 +731,9 @@ export default function CourseEditorFullscreen({ yearLevel, onClose }) {
         <div className="flex-1 overflow-y-auto">
           {selectedLessonNum === null ? (
             <div className="p-8 max-w-4xl">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-gray-900">Course Details</h2>
-              </div>
-              
-              <div className="space-y-6">
+              <h2 className="text-2xl font-bold text-gray-900 mb-5">Course Details</h2>
+
+              <div className="space-y-5">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Subtitle</label>
                   <Input
@@ -670,64 +797,48 @@ export default function CourseEditorFullscreen({ yearLevel, onClose }) {
             </div>
           ) : selectedLessonNum ? (
             <div className="p-8 max-w-4xl">
-              <div className="mb-8">
-                <div className="flex items-start justify-between gap-4 mb-2">
-                  <div className="flex-1">
-                    <p className="text-xs text-gray-400 mb-1">{(() => {
-                      const lesson = lessons.find(l => l.num === selectedLessonNum);
-                      if (lesson?.type === "milestone") {
-                        const mIdx = lessons.filter(l => l.type === "milestone" && l.num <= selectedLessonNum).length;
-                        return `Milestone ${lesson.milestoneNum || mIdx}`;
-                      }
-                      const lIdx = lessons.filter(l => l.type !== "milestone" && l.num <= selectedLessonNum).length;
-                      return `Lesson ${lIdx}`;
-                    })()} — Title</p>
-                    {editingLessonField?.num === selectedLessonNum && editingLessonField?.field === "title" ? (
-                      <Input
-                        autoFocus
-                        value={lessons.find(l => l.num === selectedLessonNum)?.title || ""}
-                        onChange={e => updateLesson(selectedLessonNum, { title: e.target.value })}
-                        onBlur={() => setEditingLessonField(null)}
-                        onKeyDown={e => e.key === "Enter" && setEditingLessonField(null)}
-                        className="text-xl font-bold"
-                      />
-                    ) : (
-                      <h2
-                        className="text-2xl font-bold text-gray-900 cursor-pointer hover:text-blue-600 flex items-center gap-2 group"
-                        onClick={() => setEditingLessonField({ num: selectedLessonNum, field: "title" })}
-                      >
-                        {lessons.find(l => l.num === selectedLessonNum)?.title}
-                        <Edit2 className="w-4 h-4 opacity-0 group-hover:opacity-50" />
-                      </h2>
-                    )}
-                  </div>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-400 mb-1">Summary</p>
-                  {editingLessonField?.num === selectedLessonNum && editingLessonField?.field === "summary" ? (
-                    <Textarea
-                      autoFocus
-                      value={lessons.find(l => l.num === selectedLessonNum)?.summary || ""}
-                      onChange={e => updateLesson(selectedLessonNum, { summary: e.target.value })}
-                      onBlur={() => setEditingLessonField(null)}
-                      className="text-sm min-h-[72px]"
-                    />
-                  ) : (
-                    <p
-                      className="text-gray-600 cursor-pointer hover:text-blue-600 flex items-start gap-2 group"
-                      onClick={() => setEditingLessonField({ num: selectedLessonNum, field: "summary" })}
-                    >
-                      <span>{lessons.find(l => l.num === selectedLessonNum)?.summary || <span className="italic text-gray-400">No summary — click to add</span>}</span>
-                      <Edit2 className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 opacity-0 group-hover:opacity-50" />
-                    </p>
-                  )}
-                </div>
+              <div className="mb-6">
+                {editingLessonField?.num === selectedLessonNum && editingLessonField?.field === "title" ? (
+                  <Input
+                    autoFocus
+                    value={lessons.find(l => l.num === selectedLessonNum)?.title || ""}
+                    onChange={e => updateLesson(selectedLessonNum, { title: e.target.value })}
+                    onBlur={() => setEditingLessonField(null)}
+                    onKeyDown={e => e.key === "Enter" && setEditingLessonField(null)}
+                    className="text-xl font-bold mb-2"
+                  />
+                ) : (
+                  <h2
+                    className="text-2xl font-bold text-gray-900 cursor-pointer hover:text-blue-600 flex items-center gap-2 group mb-2"
+                    onClick={() => setEditingLessonField({ num: selectedLessonNum, field: "title" })}
+                  >
+                    {lessons.find(l => l.num === selectedLessonNum)?.title}
+                    <Edit2 className="w-4 h-4 opacity-0 group-hover:opacity-50" />
+                  </h2>
+                )}
+                {editingLessonField?.num === selectedLessonNum && editingLessonField?.field === "summary" ? (
+                  <Textarea
+                    autoFocus
+                    value={lessons.find(l => l.num === selectedLessonNum)?.summary || ""}
+                    onChange={e => updateLesson(selectedLessonNum, { summary: e.target.value })}
+                    onBlur={() => setEditingLessonField(null)}
+                    className="text-sm min-h-[72px]"
+                  />
+                ) : (
+                  <p
+                    className="text-gray-600 cursor-pointer hover:text-blue-600 flex items-start gap-2 group"
+                    onClick={() => setEditingLessonField({ num: selectedLessonNum, field: "summary" })}
+                  >
+                    <span>{lessons.find(l => l.num === selectedLessonNum)?.summary || <span className="italic text-gray-400">Add a summary…</span>}</span>
+                    <Edit2 className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 opacity-0 group-hover:opacity-50" />
+                  </p>
+                )}
               </div>
 
               {/* Lesson Objectives */}
-              <div className="mb-8">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Learning Objectives</h3>
-                <div className="space-y-2 mb-4">
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">Learning Objectives</h3>
+                <div className="space-y-2 mb-3">
                   {lessonObjectives.map((obj, i) => (
                     <div key={i} className="flex items-start gap-2 p-3 bg-emerald-50 rounded-lg border border-emerald-200">
                       <CheckCircle className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
@@ -754,46 +865,53 @@ export default function CourseEditorFullscreen({ yearLevel, onClose }) {
 
               {/* Sections */}
               <div>
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center justify-between mb-3">
                   <h3 className="text-lg font-semibold text-gray-900">Sections</h3>
-                  <div className="flex gap-2 flex-wrap">
-                    <Button onClick={addSection} size="sm" className="bg-blue-600 text-white gap-1">
-                      <Plus className="w-3 h-3" />
-                      Content
-                    </Button>
-                    <Button onClick={() => addTypedSection("callout")} size="sm" className="bg-amber-600 text-white gap-1">
-                      <Plus className="w-3 h-3" />
-                      Callout
-                    </Button>
-                    <Button onClick={() => addActivity("mcq")} size="sm" disabled={countGradedActivities() >= 1} className={`gap-1 text-white ${countGradedActivities() >= 1 ? "bg-gray-400" : "bg-purple-600"}`}>
-                      <HelpCircle className="w-3 h-3" />
-                      MCQ
-                    </Button>
-                    <Button onClick={() => addActivity("micro_validation")} size="sm" className="bg-cyan-600 text-white gap-1">
-                      <HelpCircle className="w-3 h-3" />
-                      Micro Validation
-                    </Button>
-                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white gap-1">
+                        <Plus className="w-3.5 h-3.5" />
+                        Add Section
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      <DropdownMenuItem onClick={addSection} className="gap-2">
+                        <Plus className="w-3.5 h-3.5 text-blue-600" />
+                        Content
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => addTypedSection("callout")} className="gap-2">
+                        <Plus className="w-3.5 h-3.5 text-amber-600" />
+                        Callout
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => addActivity("mcq")}
+                        disabled={countGradedActivities() >= 1}
+                        className="gap-2"
+                      >
+                        <HelpCircle className="w-3.5 h-3.5 text-purple-600" />
+                        MCQ {countGradedActivities() >= 1 && <span className="ml-auto text-xs text-gray-400">Only one</span>}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => addActivity("micro_validation")} className="gap-2">
+                        <HelpCircle className="w-3.5 h-3.5 text-cyan-600" />
+                        Micro Validation
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
 
                 {sections.length === 0 && (
-                  <div className="border-2 border-dashed border-gray-200 rounded-lg p-10 text-center bg-gray-50">
+                  <div className="border-2 border-dashed border-gray-200 rounded-lg p-8 text-center bg-gray-50">
                     <p className="text-sm text-gray-600 font-medium mb-1">No sections yet</p>
-                    <p className="text-xs text-gray-500 mb-4">Add a section above to start building this lesson.</p>
-                    <div className="flex justify-center gap-2 flex-wrap">
-                      <Button onClick={addSection} size="sm" variant="outline" className="gap-1">
-                        <Plus className="w-3 h-3" /> Content
-                      </Button>
-                      <Button onClick={() => addTypedSection("callout")} size="sm" variant="outline" className="gap-1">
-                        <Plus className="w-3 h-3" /> Callout
-                      </Button>
-                    </div>
+                    <p className="text-xs text-gray-500 mb-3">Use "Add Section" above to start building this lesson.</p>
+                    <Button onClick={addSection} size="sm" variant="outline" className="gap-1">
+                      <Plus className="w-3 h-3" /> Add Content
+                    </Button>
                   </div>
                 )}
 
                 <div className="space-y-3">
                   {sections.map((section, idx) => (
-                    <Card key={section.id} className="border-gray-200">
+                    <Card key={section.id} className="border-gray-200" data-section-id={section.id}>
                       <CardContent className="p-4 space-y-3">
                         <div className="flex items-center gap-2">
                           <Input
@@ -803,8 +921,8 @@ export default function CourseEditorFullscreen({ yearLevel, onClose }) {
                             className="text-sm flex-1"
                           />
                           {isMcqSection(section) ? (
-                            <span className="text-xs text-purple-600 font-semibold border border-purple-200 bg-purple-50 rounded px-2 py-1 flex items-center gap-1">
-                              🔒 MCQ (Graded)
+                            <span className="text-xs text-purple-700 font-medium bg-purple-50 border border-purple-200 rounded px-2 py-1 flex items-center gap-1">
+                              🔒 MCQ
                             </span>
                           ) : (
                             <select
@@ -817,7 +935,7 @@ export default function CourseEditorFullscreen({ yearLevel, onClose }) {
                                   updateSection(section.id, { type: val, activity_type: undefined });
                                 }
                               }}
-                              className="border border-gray-200 rounded px-2 py-1 text-xs"
+                              className="border border-gray-200 rounded px-2 py-1 text-xs bg-white text-gray-600"
                             >
                               <option value="text">Content</option>
                               <option value="callout">Callout</option>
@@ -825,30 +943,35 @@ export default function CourseEditorFullscreen({ yearLevel, onClose }) {
                               <option value="micro_validation">Micro Validation</option>
                             </select>
                           )}
-                          <Button
-                            variant="ghost" size="icon"
-                            onClick={() => moveSection(section.id, "up")}
-                            disabled={idx === 0 || isMcqSection(section)}
-                            className="h-8 w-8"
-                          >
-                            <ChevronUp className="w-3 h-3" />
-                          </Button>
-                          <Button
-                            variant="ghost" size="icon"
-                            onClick={() => moveSection(section.id, "down")}
-                            disabled={idx === sections.length - 1 || isMcqSection(section) || isMcqSection(sections[idx + 1])}
-                            className="h-8 w-8"
-                          >
-                            <ChevronDown className="w-3 h-3" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setConfirmDelete({ kind: "section", id: section.id, label: section.title || "this section" })}
-                            className="h-8 w-8 text-red-400"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </Button>
+                          <div className="flex items-center border-l border-gray-200 pl-1 ml-1">
+                            <Button
+                              variant="ghost" size="icon"
+                              onClick={() => moveSection(section.id, "up")}
+                              disabled={idx === 0 || isMcqSection(section)}
+                              className="h-7 w-7 text-gray-500"
+                              aria-label="Move up"
+                            >
+                              <ChevronUp className="w-3.5 h-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost" size="icon"
+                              onClick={() => moveSection(section.id, "down")}
+                              disabled={idx === sections.length - 1 || isMcqSection(section) || isMcqSection(sections[idx + 1])}
+                              className="h-7 w-7 text-gray-500"
+                              aria-label="Move down"
+                            >
+                              <ChevronDown className="w-3.5 h-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setConfirmDelete({ kind: "section", id: section.id, label: section.title || "this section" })}
+                              className="h-7 w-7 text-gray-500 hover:text-red-600"
+                              aria-label="Delete"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
                         </div>
 
                         {(section.type === "text" || section.type === "image" || section.type === "video") && (
@@ -918,40 +1041,19 @@ export default function CourseEditorFullscreen({ yearLevel, onClose }) {
         </div>
       </div>
 
-      {/* Bottom Save Panel */}
-      <div className="flex-shrink-0 border-t border-gray-200 bg-gray-50 px-8 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          {saveSuccess && (
-            <div className="flex items-center gap-2 text-emerald-600 text-sm">
-              <CheckCircle className="w-4 h-4" />
-              <span>Changes saved successfully</span>
-            </div>
-          )}
-          {saveError && (
-            <div className="flex items-center gap-2 text-red-600 text-sm">
-              <AlertCircle className="w-4 h-4" />
-              <span>{saveError}</span>
-            </div>
-          )}
+      {/* Bottom Bar — autosave status + Preview + Close */}
+      <div className="flex-shrink-0 border-t border-gray-200 bg-gray-50 px-8 py-4 flex items-center">
+        <div className="flex-1 min-w-0">
+          <AutosaveIndicator status={autosaveStatus} error={saveError} lastSavedAt={lastSavedAt} verbose />
         </div>
-        <div className="flex gap-3">
-          <Button variant="outline" onClick={handleCloseClick} disabled={isSaving}>
-            Close
-          </Button>
+        <div className="flex gap-3 flex-shrink-0">
           <Button
             variant="outline"
             className="gap-1.5"
-            onClick={async () => {
-              if (hasUnsavedChanges) await handleSaveAll();
-              const lessonNum = selectedLessonNum ?? 0;
-              window.open(`/Viewer?yearLevel=${yearLevel.key}&lesson=${lessonNum}&returnTo=CourseBuilder`, '_blank');
-            }}
+            onClick={() => handlePreview(selectedLessonNum ?? 0)}
           >
             <Eye className="w-4 h-4" />
-            {hasUnsavedChanges ? "Save & Preview" : "Preview"}
-          </Button>
-          <Button onClick={handleSaveAll} disabled={!hasUnsavedChanges || isSaving} className="bg-emerald-600 hover:bg-emerald-700 text-white">
-            {isSaving ? "Saving..." : "Save Changes"}
+            Preview
           </Button>
         </div>
       </div>
@@ -986,19 +1088,50 @@ export default function CourseEditorFullscreen({ yearLevel, onClose }) {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Unsaved Changes Dialog */}
-      <AlertDialog open={showUnsavedDialog} onOpenChange={setShowUnsavedDialog}>
-        <AlertDialogContent>
-          <AlertDialogTitle>Unsaved Changes</AlertDialogTitle>
-          <AlertDialogDescription>
-            You have unsaved changes. Would you like to save them before {pendingAction?.type === "selectLesson" ? "switching lessons" : "closing"}?
-          </AlertDialogDescription>
-          <div className="flex gap-3 justify-end">
-            <AlertDialogCancel onClick={handleDiscardChanges}>Discard</AlertDialogCancel>
-            <AlertDialogAction onClick={handleSaveAndContinue}>Save & Continue</AlertDialogAction>
-          </div>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
+}
+
+function AutosaveIndicator({ status, error, lastSavedAt, verbose = false }) {
+  const formatTime = (d) => {
+    if (!d) return null;
+    const hh = String(d.getHours() % 12 || 12);
+    const mm = String(d.getMinutes()).padStart(2, "0");
+    const ampm = d.getHours() >= 12 ? "PM" : "AM";
+    return `${hh}:${mm} ${ampm}`;
+  };
+
+  if (status === "saving") {
+    return (
+      <div className="flex items-center gap-2 text-gray-500 text-sm">
+        <div className="w-3.5 h-3.5 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+        <span>Saving…</span>
+      </div>
+    );
+  }
+  if (status === "error") {
+    return (
+      <div className="flex items-center gap-2 text-red-600 text-sm">
+        <AlertCircle className="w-4 h-4" />
+        <span>{verbose ? `Save failed: ${error}` : "Save failed"}</span>
+      </div>
+    );
+  }
+  if (status === "pending") {
+    return (
+      <div className="flex items-center gap-2 text-amber-600 text-sm">
+        <AlertCircle className="w-4 h-4" />
+        <span>Pending changes…</span>
+      </div>
+    );
+  }
+  if (status === "saved") {
+    return (
+      <div className="flex items-center gap-2 text-emerald-600 text-sm">
+        <CheckCircle className="w-4 h-4" />
+        <span>{verbose && lastSavedAt ? `Saved at ${formatTime(lastSavedAt)}` : "Saved"}</span>
+      </div>
+    );
+  }
+  return null;
 }
